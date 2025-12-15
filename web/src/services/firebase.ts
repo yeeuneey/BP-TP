@@ -13,6 +13,12 @@ const rawConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
+if (import.meta.env.DEV) {
+  // Helps diagnose missing envs in local dev
+  // eslint-disable-next-line no-console
+  console.log('Firebase env (dev):', rawConfig)
+}
+
 const missing = Object.entries(rawConfig)
   .filter(([, v]) => !v)
   .map(([k]) => k)
