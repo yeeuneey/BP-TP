@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
-import { getCurrentUserId } from '@/services/auth'
+import { ensureAuthReady, getCurrentUserId } from '@/services/auth'
 import SigninView from '@/views/SigninView.vue'
 import HomeView from '@/views/HomeView.vue'
 import PopularView from '@/views/PopularView.vue'
@@ -60,17 +60,18 @@ const router = createRouter({
   routes,
 })
 
-// 로그인 여부 체크 (LocalStorage or Pinia)
-router.beforeEach((to, _from, next) => {
+// Firebase 인증 초기화 이후 로그인 상태 확인
+router.beforeEach(async (to) => {
+  await ensureAuthReady()
   const isLoggedIn = getCurrentUserId() !== null
 
   if (to.meta.requiresAuth && !isLoggedIn) {
-    next({ name: 'signin' })
-  } else if (to.name === 'signin' && isLoggedIn) {
-    next({ name: 'home' })
-  } else {
-    next()
+    return { name: 'signin' }
   }
+  if (to.name === 'signin' && isLoggedIn) {
+    return { name: 'home' }
+  }
+  return true
 })
 
 export default router

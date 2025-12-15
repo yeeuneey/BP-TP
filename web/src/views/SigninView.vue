@@ -1,6 +1,5 @@
 <template>
   <div class="auth-page">
-    <!-- 움직이는 별 배경 -->
     <div class="starfield">
       <span
         v-for="star in stars"
@@ -23,7 +22,7 @@
         </button>
 
         <div class="auth-title">
-          {{ mode === 'login' ? '로그인' : '회원가입' }}
+          {{ mode === 'login' ? 'Sign In' : 'Create Account' }}
         </div>
 
         <button
@@ -32,7 +31,7 @@
           :class="{ active: mode === 'register' }"
           @click="mode = 'register'"
         >
-          회원가입
+          SIGN UP
         </button>
       </div>
 
@@ -48,29 +47,23 @@
           aria-hidden="true"
         ></div>
 
-        <div
-          class="auth-carousel"
-          :class="[`auth-carousel--${mode}`]"
-        >
+        <div class="auth-carousel" :class="[`auth-carousel--${mode}`]">
           <section class="auth-panel auth-panel--login">
-            <div
-              class="panel-content"
-              :class="{ 'panel-content--visible': mode === 'login' }"
-            >
+            <div class="panel-content" :class="{ 'panel-content--visible': mode === 'login' }">
               <div class="panel-eyebrow">LOGIN PANEL</div>
-              <h2 class="panel-title">로그인</h2>
+              <h2 class="panel-title">Sign In</h2>
               <p class="panel-subtitle">
-                TMDB API Key를 사용해 로그인하세요.
+                TMDB API Key를 비밀번호 자리로 입력하면 됩니다.
               </p>
 
               <form class="auth-form" @submit.prevent="handleLogin">
                 <div class="field">
-                  <label for="login-email">아이디</label>
+                  <label for="login-email">이메일</label>
                   <input
                     id="login-email"
                     v-model="loginEmail"
                     type="email"
-                    placeholder="이메일을 입력하세요"
+                    placeholder="you@example.com"
                     required
                   />
                 </div>
@@ -80,7 +73,7 @@
                     id="login-password"
                     v-model="loginPassword"
                     type="password"
-                    placeholder="TMDB API 키를 입력하세요"
+                    placeholder="TMDB API Key"
                     required
                   />
                 </div>
@@ -88,21 +81,29 @@
                 <div class="form-row">
                   <label class="remember-toggle">
                     <input v-model="rememberMe" type="checkbox" />
-                    <span>자동 로그인</span>
+                    <span>로그인 상태 유지</span>
                   </label>
                 </div>
 
-                <button type="submit" class="cta-button">로그인</button>
-              </form>
+              <button type="submit" class="cta-button" :disabled="isSubmitting">
+                로그인
+              </button>
+            </form>
 
-              <p
-                v-if="message && mode === 'login'"
-                class="auth-message auth-message--inline"
-              >
-                {{ message }}
-              </p>
-            </div>
-          </section>
+            <button
+              type="button"
+              class="cta-button cta-button--google"
+              :disabled="isSubmitting"
+              @click="handleGoogleLogin"
+            >
+              Google로 로그인
+            </button>
+
+            <p v-if="message && mode === 'login'" class="auth-message auth-message--inline">
+              {{ message }}
+            </p>
+          </div>
+        </section>
 
           <section class="auth-panel auth-panel--register">
             <div
@@ -110,19 +111,19 @@
               :class="{ 'panel-content--visible': mode === 'register' }"
             >
               <div class="panel-eyebrow">SIGN UP PANEL</div>
-              <h2 class="panel-title">회원가입</h2>
+              <h2 class="panel-title">Create account</h2>
               <p class="panel-subtitle">
-                새로운 계정을 등록해보세요.
+                이메일과 TMDB API Key로 계정을 생성합니다.
               </p>
 
               <form class="auth-form" @submit.prevent="handleRegister">
                 <div class="field">
-                  <label for="register-email">아이디 (이메일)</label>
+                  <label for="register-email">이메일</label>
                   <input
                     id="register-email"
                     v-model="registerEmail"
                     type="email"
-                    placeholder="이메일을 입력하세요"
+                    placeholder="you@example.com"
                     required
                   />
                 </div>
@@ -132,7 +133,7 @@
                     id="register-password"
                     v-model="registerPassword"
                     type="password"
-                    placeholder="TMDB API 키를 입력하세요"
+                    placeholder="TMDB API Key"
                     required
                   />
                 </div>
@@ -142,17 +143,17 @@
                     id="register-password-confirm"
                     v-model="registerPasswordConfirm"
                     type="password"
-                    placeholder="다시 한 번 입력하세요"
+                    placeholder="비밀번호를 다시 입력하세요"
                     required
                   />
                 </div>
 
                 <label class="terms">
                   <input v-model="agreeTerms" type="checkbox" />
-                  <span>이용 약관 및 개인정보 제공에 동의합니다.</span>
+                  <span>약관에 동의합니다.</span>
                 </label>
 
-                <button type="submit" class="cta-button cta-button--signup">
+                <button type="submit" class="cta-button cta-button--signup" :disabled="isSubmitting">
                   회원가입
                 </button>
               </form>
@@ -171,7 +172,6 @@
   </div>
 </template>
 
-
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -180,6 +180,7 @@ import {
   isKeepLoginEnabled,
   tryLogin,
   tryRegister,
+  loginWithGoogle,
 } from '@/services/auth'
 
 const router = useRouter()
@@ -203,13 +204,9 @@ const variantBaseDuration: Record<StarVariant, number> = {
 }
 
 const stars: StarConfig[] = Array.from({ length: STAR_COUNT }, (_, idx) => {
-  const variant: StarVariant =
-    idx % 3 === 0 ? 'near' : idx % 2 === 0 ? 'mid' : 'far'
+  const variant: StarVariant = idx % 3 === 0 ? 'near' : idx % 2 === 0 ? 'mid' : 'far'
   const jitter = Math.random() * 12 - 6
-  const duration = Math.max(
-    15,
-    variantBaseDuration[variant] + jitter,
-  )
+  const duration = Math.max(15, variantBaseDuration[variant] + jitter)
   const delay = (Math.random() * duration * -1).toFixed(2)
 
   return {
@@ -234,21 +231,24 @@ const registerPasswordConfirm = ref('')
 const agreeTerms = ref(false)
 
 const message = ref('')
+const isSubmitting = ref(false)
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
-function handleLogin() {
+async function handleLogin() {
   if (!isValidEmail(loginEmail.value)) {
-    message.value = '올바른 이메일 주소를 입력해 주세요.'
+    message.value = '유효한 이메일을 입력해주세요.'
     return
   }
-  tryLogin(
+  message.value = ''
+  isSubmitting.value = true
+  await tryLogin(
     loginEmail.value,
     loginPassword.value,
     () => {
-      message.value = '로그인 완료! 홈으로 이동합니다.'
+      message.value = '로그인 성공! 홈으로 이동합니다.'
       router.push('/')
     },
     (err: string) => {
@@ -256,11 +256,12 @@ function handleLogin() {
     },
     rememberMe.value,
   )
+  isSubmitting.value = false
 }
 
-function handleRegister() {
+async function handleRegister() {
   if (!isValidEmail(registerEmail.value)) {
-    message.value = '올바른 이메일 주소를 입력해 주세요.'
+    message.value = '유효한 이메일을 입력해주세요.'
     return
   }
   if (registerPassword.value !== registerPasswordConfirm.value) {
@@ -268,11 +269,13 @@ function handleRegister() {
     return
   }
   if (!agreeTerms.value) {
-    message.value = '약관과 개인정보 제공에 동의해 주세요.'
+    message.value = '약관에 동의해주세요.'
     return
   }
 
-  tryRegister(
+  message.value = ''
+  isSubmitting.value = true
+  await tryRegister(
     registerEmail.value,
     registerPassword.value,
     () => {
@@ -284,6 +287,23 @@ function handleRegister() {
       message.value = err
     },
   )
+  isSubmitting.value = false
+}
+
+async function handleGoogleLogin() {
+  message.value = ''
+  isSubmitting.value = true
+  await loginWithGoogle(
+    rememberMe.value,
+    (user) => {
+      message.value = `${user.id}로 로그인했어요.`
+      router.push('/')
+    },
+    (err: string) => {
+      message.value = err
+    },
+  )
+  isSubmitting.value = false
 }
 </script>
 
@@ -300,7 +320,6 @@ function handleRegister() {
   position: relative;
 }
 
-/* === 별이 흐르는 배경 === */
 .starfield {
   position: fixed;
   inset: 0;
@@ -351,7 +370,6 @@ function handleRegister() {
   }
 }
 
-/* === 3D 씬 === */
 .auth-stage {
   position: relative;
   width: min(720px, 100%);
@@ -646,6 +664,19 @@ function handleRegister() {
     0 0 0 1px rgba(229, 9, 20, 0.6);
 }
 
+.cta-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cta-button--google {
+  margin-top: 0.4rem;
+  background: linear-gradient(135deg, #1a73e8, #0f5db6);
+  box-shadow:
+    0 18px 38px rgba(15, 93, 182, 0.6),
+    0 0 0 1px rgba(26, 115, 232, 0.45);
+}
+
 .auth-message {
   margin-top: 1.2rem;
   text-align: center;
@@ -694,8 +725,6 @@ function handleRegister() {
   }
 }
 
-
-/* 폼 전환 애니메이션 그대로 유지 */
 .slide-fade-enter-active,
 .slide-fade-leave-active {
   transition: all 0.35s ease;
@@ -709,7 +738,6 @@ function handleRegister() {
   transform: translateY(-18px);
 }
 
-/* 모바일 튜닝 */
 @media (max-width: 520px) {
   .auth-card {
     width: calc(100% - 1.5rem);
@@ -730,5 +758,4 @@ function handleRegister() {
     gap: 0.35rem;
   }
 }
-
 </style>

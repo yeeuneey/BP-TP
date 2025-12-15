@@ -119,6 +119,8 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
+import { onAuthStateChanged } from 'firebase/auth'
+import { auth } from '@/services/firebase'
 import { getCurrentUserId, logout } from '@/services/auth'
 import { useMotionPreference } from '@/composables/useMotionPreference'
 import { useTheme } from '@/composables/useTheme'
@@ -169,6 +171,9 @@ function updateScrollState() {
 onMounted(() => {
   updateScrollState()
   window.addEventListener('scroll', updateScrollState, { passive: true })
+  onAuthStateChanged(auth, (user) => {
+    userId.value = user?.email ?? null
+  })
 })
 
 onBeforeUnmount(() => {
@@ -194,8 +199,8 @@ function handleSignIn() {
   router.push('/signin')
 }
 
-function handleLogout() {
-  logout()
+async function handleLogout() {
+  await logout()
   userId.value = null
   router.push('/signin')
 }

@@ -1,7 +1,17 @@
-// src/services/auth.ts
+import {
+  browserLocalPersistence,
+  browserSessionPersistence,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  setPersistence,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+} from 'firebase/auth'
+import { auth } from './firebase'
 import type { User } from '@/types/user'
 
-const USERS_KEY = 'users'
 const CURRENT_USER_KEY = 'currentUser'
 const KEEP_LOGIN_KEY = 'keepLogin'
 const TMDB_KEY_STORAGE = 'TMDb-Key'
@@ -23,73 +33,120 @@ function getFromStorages(key: string): string | null {
   return localStorage.getItem(key) ?? sessionStorage.getItem(key)
 }
 
-function getUsers(): User[] {
-  const raw = localStorage.getItem(USERS_KEY)
-  return raw ? (JSON.parse(raw) as User[]) : []
+let authReadyPromise: Promise<unknown> | null = null
+const googleProvider = new GoogleAuthProvider()
+
+export function ensureAuthReady() {
+  if (!authReadyPromise) {
+    authReadyPromise = new Promise((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user?.email) {
+          setPersistedValue(CURRENT_USER_KEY, user.email, true)
+        }
+        unsubscribe()
+        resolve(user)
+      })
+    })
+  }
+  return authReadyPromise
 }
 
-function saveUsers(users: User[]) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users))
-}
-
-export function tryRegister(
+export async function tryRegister(
   email: string,
   password: string,
   success: (user: User) => void,
   fail: (msg: string) => void,
 ) {
-  const users = getUsers()
+  try {
+    await setPersistence(auth, browserLocalPersistence)
+    const cred = await createUserWithEmailAndPassword(auth, email, password)
+    const userEmail = cred.user.email ?? email
+    setPersistedValue(TMDB_KEY_STORAGE, password, true)
+    setPersistedValue(CURRENT_USER_KEY, userEmail, true)
+    localStorage.setItem(KEEP_LOGIN_KEY, 'true')
+    localStorage.setItem(REMEMBER_EMAIL_KEY, email)
 
-  const userExists = users.some((u) => u.id === email)
-  if (userExists) {
-    fail('이미 가입된 계정입니다.')
-    return
+    success({ id: userEmail, password })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '회원가입에 실패했습니다.'
+    fail(message)
   }
-
-  const newUser: User = { id: email, password }
-  users.push(newUser)
-  saveUsers(users)
-  localStorage.setItem(TMDB_KEY_STORAGE, password)
-
-  success(newUser)
 }
 
-export function tryLogin(
+export async function tryLogin(
   email: string,
   password: string,
   success: (user: User) => void,
   fail: (msg: string) => void,
   saveToken: boolean,
 ) {
-  const users = getUsers()
-  const user = users.find((u) => u.id === email && u.password === password)
+  try {
+    const persistence = saveToken ? browserLocalPersistence : browserSessionPersistence
+    await setPersistence(auth, persistence)
+    const cred = await signInWithEmailAndPassword(auth, email, password)
+    const userEmail = cred.user.email ?? email
 
-  if (!user) {
-    fail('입력하신 아이디 또는 비밀번호가 올바르지 않습니다.')
-    return
+    setPersistedValue(TMDB_KEY_STORAGE, password, saveToken)
+    setPersistedValue(CURRENT_USER_KEY, userEmail, saveToken)
+
+    if (saveToken) {
+      localStorage.setItem(KEEP_LOGIN_KEY, 'true')
+      localStorage.setItem(REMEMBER_EMAIL_KEY, email)
+    } else {
+      localStorage.removeItem(KEEP_LOGIN_KEY)
+      localStorage.removeItem(REMEMBER_EMAIL_KEY)
+    }
+
+    success({ id: userEmail, password })
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.'
+    fail(message)
   }
-
-  setPersistedValue(TMDB_KEY_STORAGE, user.password, saveToken)
-  setPersistedValue(CURRENT_USER_KEY, user.id, saveToken)
-
-  if (saveToken) {
-    localStorage.setItem(KEEP_LOGIN_KEY, 'true')
-    localStorage.setItem(REMEMBER_EMAIL_KEY, email)
-  } else {
-    localStorage.removeItem(KEEP_LOGIN_KEY)
-    localStorage.removeItem(REMEMBER_EMAIL_KEY)
-  }
-
-  success(user)
 }
 
-export function logout() {
+export async function logout() {
+  await signOut(auth)
   clearStoredValue(CURRENT_USER_KEY)
   clearStoredValue(TMDB_KEY_STORAGE)
 }
 
+export async function loginWithGoogle(
+  saveToken: boolean,
+  success: (user: User) => void,
+  fail: (msg: string) => void,
+) {
+  try {
+    const persistence = saveToken ? browserLocalPersistence : browserSessionPersistence
+    await setPersistence(auth, persistence)
+    const cred = await signInWithPopup(auth, googleProvider)
+    const userEmail = cred.user.email ?? 'Google User'
+
+    setPersistedValue(CURRENT_USER_KEY, userEmail, saveToken)
+    clearStoredValue(TMDB_KEY_STORAGE)
+
+    if (saveToken) {
+      localStorage.setItem(KEEP_LOGIN_KEY, 'true')
+      localStorage.setItem(REMEMBER_EMAIL_KEY, userEmail)
+    } else {
+      localStorage.removeItem(KEEP_LOGIN_KEY)
+      localStorage.removeItem(REMEMBER_EMAIL_KEY)
+    }
+
+    success({ id: userEmail, password: '' })
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : 'Google 로그인에 실패했습니다. 다시 시도해주세요.'
+    fail(message)
+  }
+}
+
 export function getCurrentUserId(): string | null {
-  return getFromStorages(CURRENT_USER_KEY)
+  return auth.currentUser?.email ?? getFromStorages(CURRENT_USER_KEY)
 }
 
 export function getStoredTmdbKey(): string | null {

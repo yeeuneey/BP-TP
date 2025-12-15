@@ -4,6 +4,7 @@ import App from './App.vue'
 import router from './router'
 import './style.css'
 import { installFontAwesome } from './plugins/fontawesome'
+import './services/firebase'
 
 const app = createApp(App)
 

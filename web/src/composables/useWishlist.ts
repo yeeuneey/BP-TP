@@ -1,8 +1,9 @@
-// src/composables/useWishlist.ts
 import { ref } from 'vue'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { onAuthStateChanged } from 'firebase/auth'
 import type { TmdbMovie } from '@/services/tmdb'
-
-const STORAGE_KEY = 'movieWishlist'
+import { auth, db } from '@/services/firebase'
+import { ensureAuthReady } from '@/services/auth'
 
 export interface WishlistMovie {
   id: number
@@ -12,51 +13,83 @@ export interface WishlistMovie {
 
 class WishlistManager {
   wishlist = ref<WishlistMovie[]>([])
+  loading = ref(false)
+  error = ref<string | null>(null)
+  private currentUserId: string | null = null
+  private isAuthReady = false
 
   constructor() {
-    this.loadWishlist()
+    this.bootstrapAuthListener()
   }
 
-  private loadWishlist() {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      try {
-        this.wishlist.value = JSON.parse(raw) as WishlistMovie[]
-      } catch {
+  private async bootstrapAuthListener() {
+    await ensureAuthReady()
+    onAuthStateChanged(auth, async (user) => {
+      this.currentUserId = user?.uid ?? null
+      this.isAuthReady = true
+      if (user) {
+        await this.loadWishlist()
+      } else {
         this.wishlist.value = []
       }
-    }
+    })
   }
 
-  private saveWishlist() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.wishlist.value))
+  private async loadWishlist() {
+    if (!this.currentUserId) {
+      this.wishlist.value = []
+      return
+    }
+
+    this.loading.value = true
+    this.error.value = null
+    try {
+      const docRef = doc(db, 'wishlists', this.currentUserId)
+      const snap = await getDoc(docRef)
+      const items = snap.exists() ? ((snap.data().items as WishlistMovie[]) ?? []) : []
+      this.wishlist.value = items
+    } catch (err: unknown) {
+      this.error.value = err instanceof Error ? err.message : '위시리스트를 불러오지 못했습니다.'
+      this.wishlist.value = []
+    } finally {
+      this.loading.value = false
+    }
   }
 
   isInWishlist(movieId: number): boolean {
     return this.wishlist.value.some((m) => m.id === movieId)
   }
 
-  toggleWishlist(movie: TmdbMovie) {
-    const index = this.wishlist.value.findIndex((item) => item.id === movie.id)
-    if (index === -1) {
-      this.wishlist.value.push({
-        id: movie.id,
-        title: movie.title,
-        poster_path: movie.poster_path,
-      })
-    } else {
-      this.wishlist.value.splice(index, 1)
+  async toggleWishlist(movie: TmdbMovie) {
+    if (!this.isAuthReady || !this.currentUserId) {
+      throw new Error('로그인이 필요합니다.')
     }
-    this.saveWishlist()
+
+    const exists = this.isInWishlist(movie.id)
+    const updated = exists
+      ? this.wishlist.value.filter((item) => item.id !== movie.id)
+      : [
+          ...this.wishlist.value,
+          {
+            id: movie.id,
+            title: movie.title,
+            poster_path: movie.poster_path ?? null,
+          },
+        ]
+
+    const docRef = doc(db, 'wishlists', this.currentUserId)
+    await setDoc(docRef, { items: updated }, { merge: true })
+    this.wishlist.value = updated
   }
 }
 
-// 싱글톤 비슷하게 한 번만 만들고 재사용
 const manager = new WishlistManager()
 
 export function useWishlist() {
   return {
     wishlist: manager.wishlist,
+    loading: manager.loading,
+    error: manager.error,
     toggleWishlist: manager.toggleWishlist.bind(manager),
     isInWishlist: manager.isInWishlist.bind(manager),
   }

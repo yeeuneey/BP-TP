@@ -5,7 +5,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
   plugins: [vue()],
-  base: '/PB-neteflix/',
+  base: '/PB-team/',
   build: {
     outDir: 'docs',
     emptyOutDir: true,

@@ -2,16 +2,15 @@
   <main class="wishlist-page page-shell">
     <header class="page-header">
       <p class="page-eyebrow">My Collection</p>
-      <h1>위시리스트</h1>
+      <h1>Wishlist</h1>
       <p class="page-subtitle">
-        관심 있는 영화를 저장해 두면 어느 기기에서든 동일한 목록을 볼 수 있어요.
+        마음에 드는 영화를 담아두고 기기 간에 동기화하세요.
       </p>
     </header>
 
     <section class="panel wishlist-panel">
       <p v-if="!wishlist.length" class="empty-text">
-        아직 추가한 영화가 없습니다. 홈, 인기, 검색 페이지에서 마음에 드는 작품을
-        <strong>Wishlist</strong> 버튼으로 저장해 보세요.
+        아직 위시리스트가 비어 있어요. 영화를 찾아 <strong>Wishlist</strong> 버튼을 눌러보세요.
       </p>
 
       <div v-else class="wishlist-grid">
@@ -36,7 +35,7 @@
                 v-if="isRecommended(movie.id)"
                 class="wishlist-card__meta wishlist-card__meta--highlight"
               >
-                추천 등록됨
+                추천 목록에 포함됨
               </p>
             </div>
             <div class="wishlist-card__actions">
@@ -44,7 +43,7 @@
                 삭제
               </button>
               <button type="button" class="recommend-btn" @click="handleRecommend(movie.id)">
-                {{ isRecommended(movie.id) ? '추천 취소' : '추천 등록' }}
+                {{ isRecommended(movie.id) ? '추천 취소' : '추천 추가' }}
               </button>
             </div>
           </div>
@@ -52,7 +51,7 @@
       </div>
 
       <p v-if="wishlist.length" class="info-text">
-        위시리스트는 브라우저 Local Storage에 저장되며 같은 브라우저에서는 자동으로 동기화됩니다.
+        위시리스트는 Firestore에 저장되어 로그인한 기기 간에 동기화됩니다.
       </p>
     </section>
   </main>
