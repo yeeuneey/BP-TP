@@ -11,6 +11,7 @@ import {
   faMagnifyingGlass,
   faMinus,
   faMoon,
+  faSliders,
   faPlus,
   faRightFromBracket,
   faStar,
