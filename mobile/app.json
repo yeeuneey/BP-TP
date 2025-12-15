@@ -34,7 +34,8 @@
         "storageBucket": "pb-team.firebasestorage.app",
         "messagingSenderId": "380986901872",
         "appId": "1:309869010872:web:99cbb839cf3067ad46f94d"
-      }
+      },
+      "tmdbApiKey": "5a279ad05d22665ad8d68345a69d0540"
     }
   }
 }

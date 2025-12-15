@@ -22,54 +22,30 @@ import {
 } from 'firebase/auth'
 import { addDoc, collection, getDocs, orderBy, query, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from './firebaseConfig'
+import {
+  fetchNowPlaying,
+  fetchPopular,
+  fetchTopRated,
+  searchMovies,
+  posterUrl,
+  type TmdbMovie,
+} from './services/tmdb'
 
 type Mode = 'login' | 'signup'
 
 interface Movie {
-  id: string
+  id: number
   title: string
-  tag: string
-  category: 'popular' | 'now' | 'recommend'
-  poster: string
+  overview: string
+  poster: string | undefined
+  category: 'popular' | 'now' | 'recommend' | 'search'
 }
 
-const MOCK_MOVIES: Movie[] = [
-  {
-    id: '1',
-    title: 'Hunting Season',
-    tag: '액션 • 서스펜스',
-    category: 'popular',
-    poster: 'https://image.tmdb.org/t/p/w500/6SCfHI7OFE4ZKxR74owjVUuxrfO.jpg',
-  },
-  {
-    id: '2',
-    title: '웨이크 업 데드맨',
-    tag: '드라마',
-    category: 'popular',
-    poster: 'https://image.tmdb.org/t/p/w500/2JiV88Eiob3yR8eRc2c0cajV5Af.jpg',
-  },
-  {
-    id: '3',
-    title: '극장에서 막 나온 작품',
-    tag: '어드벤처',
-    category: 'now',
-    poster: 'https://image.tmdb.org/t/p/w500/4W3SKA0ELlReQoj1lUq3dywmewr.jpg',
-  },
-  {
-    id: '4',
-    title: '신작 큐레이션',
-    tag: '추천',
-    category: 'recommend',
-    poster: 'https://image.tmdb.org/t/p/w500/5YZbUmjbMa3ClvSW1Wj3D6XGolb.jpg',
-  },
-  {
-    id: '5',
-    title: '미드나이트 체이스',
-    tag: '스릴러',
-    category: 'recommend',
-    poster: 'https://image.tmdb.org/t/p/w500/lV7yYH0lGKFfBXi4hqP75b3JrGA.jpg',
-  },
-]
+interface WishlistItem {
+  id: number
+  title: string
+  poster: string | undefined
+}
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('login')
@@ -78,19 +54,73 @@ export default function App() {
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [user, setUser] = useState<User | null>(null)
   const [busy, setBusy] = useState(false)
-  const [wishlist, setWishlist] = useState<Set<string>>(new Set())
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([])
+  const [popular, setPopular] = useState<Movie[]>([])
+  const [nowPlaying, setNowPlaying] = useState<Movie[]>([])
+  const [recommend, setRecommend] = useState<Movie[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<Movie[]>([])
+  const [loadingMovies, setLoadingMovies] = useState(false)
   const [notes, setNotes] = useState<string[]>([])
   const notesRef = useMemo(() => collection(db, 'mobile-notes'), [])
+  const wishlistRef = useMemo(() => collection(db, 'wishlists'), [])
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (next) => {
       setUser(next)
       if (!next) {
-        setWishlist(new Set())
+        setWishlist([])
+      } else {
+        loadMovies()
+        fetchWishlist(next.uid)
       }
     })
     return unsub
   }, [])
+
+  function mapMovies(items: TmdbMovie[], category: Movie['category']): Movie[] {
+    return items.map((m) => ({
+      id: m.id,
+      title: m.title,
+      overview: m.overview,
+      poster: posterUrl(m.poster_path),
+      category,
+    }))
+  }
+
+  async function loadMovies() {
+    setLoadingMovies(true)
+    try {
+      const [pop, now, top] = await Promise.all([
+        fetchPopular(),
+        fetchNowPlaying(),
+        fetchTopRated(),
+      ])
+      setPopular(mapMovies(pop.slice(0, 10), 'popular'))
+      setNowPlaying(mapMovies(now.slice(0, 10), 'now'))
+      setRecommend(mapMovies(top.slice(0, 10), 'recommend'))
+    } catch (err) {
+      console.error(err)
+      Alert.alert('TMDB 오류', '영화 정보를 불러오지 못했습니다.')
+    } finally {
+      setLoadingMovies(false)
+    }
+  }
+
+  async function fetchWishlist(uid: string) {
+    try {
+      const snapshot = await getDocs(
+        query(collection(db, 'wishlists', uid, 'items'), orderBy('title', 'asc')),
+      )
+      const items: WishlistItem[] = snapshot.docs.map((d) => {
+        const data = d.data() as { id: number; title: string; poster: string | undefined }
+        return { id: data.id, title: data.title, poster: data.poster }
+      })
+      setWishlist(items)
+    } catch (err) {
+      console.error('wishlist load error', err)
+    }
+  }
 
   async function handleAuth() {
     if (!email.trim() || !password) {
@@ -128,13 +158,22 @@ export default function App() {
     }
   }
 
-  function toggleWishlist(id: string) {
-    setWishlist((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+  async function toggleWishlistItem(movie: Movie) {
+    if (!user) {
+      Alert.alert('로그인 필요', '먼저 로그인하세요.')
+      return
+    }
+    const exists = wishlist.find((w) => w.id === movie.id)
+    const docRef = collection(db, 'wishlists', user.uid, 'items')
+    if (exists) {
+      const snapshot = await getDocs(query(docRef, orderBy('id', 'asc')))
+      const target = snapshot.docs.find((d) => (d.data() as { id: number }).id === movie.id)
+      if (target) await target.ref.delete()
+      setWishlist((prev) => prev.filter((w) => w.id !== movie.id))
+    } else {
+      await addDoc(docRef, { id: movie.id, title: movie.title, poster: movie.poster })
+      setWishlist((prev) => [...prev, { id: movie.id, title: movie.title, poster: movie.poster }])
+    }
   }
 
   async function handleAddNote() {
@@ -147,6 +186,23 @@ export default function App() {
     } catch (err) {
       const message = err instanceof Error ? err.message : '저장에 실패했습니다.'
       Alert.alert('오류', message)
+    }
+  }
+
+  async function handleSearch() {
+    if (!searchQuery.trim()) {
+      setSearchResults([])
+      return
+    }
+    try {
+      setLoadingMovies(true)
+      const results = await searchMovies(searchQuery.trim())
+      setSearchResults(mapMovies(results.slice(0, 12), 'search'))
+    } catch (err) {
+      console.error(err)
+      Alert.alert('검색 오류', '검색 결과를 불러오지 못했습니다.')
+    } finally {
+      setLoadingMovies(false)
     }
   }
 
@@ -213,10 +269,6 @@ export default function App() {
     )
   }
 
-  const popular = MOCK_MOVIES.filter((m) => m.category === 'popular')
-  const nowPlaying = MOCK_MOVIES.filter((m) => m.category === 'now')
-  const recommend = MOCK_MOVIES.filter((m) => m.category === 'recommend')
-
   return (
     <SafeAreaView style={styles.homeContainer}>
       <StatusBar style="light" />
@@ -228,7 +280,7 @@ export default function App() {
               <TouchableOpacity
                 key={item}
                 activeOpacity={0.7}
-                onPress={() => Alert.alert(item, '웹과 동일하게 탐색을 추가할 수 있어요.')}
+                onPress={() => Alert.alert(item, '모바일 네비게이션은 차트 형식으로 구현되었습니다.')}
               >
                 <Text style={styles.navLink}>{item}</Text>
               </TouchableOpacity>
@@ -243,28 +295,65 @@ export default function App() {
           <Text style={styles.heroEyebrow}>FOR YOU</Text>
           <Text style={styles.heroTitle}>TMDB API로 큐레이션된 추천</Text>
           <Text style={styles.heroSubtitle}>인기, 상영 중, 추천 작품을 한 곳에서 만나보세요.</Text>
-          <View style={styles.heroButtons}>
-            <TouchableOpacity style={styles.primaryButton} onPress={handleAddNote} activeOpacity={0.85}>
-              <Text style={styles.primaryText}>Firestore에 메모 저장</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={() => Alert.alert('추천', '추천 리스트를 확인하세요!')}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.secondaryText}>추천 보기</Text>
+          <View style={styles.searchRow}>
+            <TextInput
+              placeholder="검색어를 입력하세요"
+              placeholderTextColor="#9ca3af"
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
+            />
+            <TouchableOpacity style={styles.secondaryButton} onPress={handleSearch} activeOpacity={0.85}>
+              <Text style={styles.secondaryText}>검색</Text>
             </TouchableOpacity>
           </View>
-          {!!notes.length && (
-            <View style={styles.noteBubble}>
-              <Text style={styles.noteBubbleText}>{notes[0]}</Text>
-            </View>
-          )}
         </View>
 
-        <Section title="지금 가장 뜨는 영화" data={popular} wishlist={wishlist} onToggle={toggleWishlist} />
-        <Section title="극장에서 막 나온 작품" data={nowPlaying} wishlist={wishlist} onToggle={toggleWishlist} />
-        <Section title="추천 큐레이션" data={recommend} wishlist={wishlist} onToggle={toggleWishlist} />
+        {loadingMovies && <ActivityIndicator color="#e50914" style={{ marginVertical: 10 }} />}
+
+        {!!searchResults.length && (
+          <Section
+            title="검색 결과"
+            data={searchResults}
+            wishlist={wishlist}
+            onToggle={toggleWishlistItem}
+          />
+        )}
+        <Section
+          title="지금 가장 뜨는 영화"
+          data={popular}
+          wishlist={wishlist}
+          onToggle={toggleWishlistItem}
+        />
+        <Section
+          title="극장에서 막 나온 작품"
+          data={nowPlaying}
+          wishlist={wishlist}
+          onToggle={toggleWishlistItem}
+        />
+        <Section
+          title="추천 큐레이션"
+          data={recommend}
+          wishlist={wishlist}
+          onToggle={toggleWishlistItem}
+        />
+
+        {!!wishlist.length && (
+          <Section
+            title="내 위시리스트"
+            data={wishlist.map((w) => ({
+              id: w.id,
+              title: w.title,
+              overview: '',
+              poster: w.poster,
+              category: 'recommend',
+            }))}
+            wishlist={wishlist}
+            onToggle={toggleWishlistItem}
+          />
+        )}
       </ScrollView>
     </SafeAreaView>
   )
@@ -278,8 +367,8 @@ function Section({
 }: {
   title: string
   data: Movie[]
-  wishlist: Set<string>
-  onToggle: (id: string) => void
+  wishlist: WishlistItem[]
+  onToggle: (movie: Movie) => void
 }) {
   return (
     <View style={styles.section}>
@@ -290,17 +379,29 @@ function Section({
         horizontal
         showsHorizontalScrollIndicator={false}
         renderItem={({ item }) => {
-          const picked = wishlist.has(item.id)
+          const picked = wishlist.some((w) => w.id === item.id)
           return (
             <View style={styles.card}>
-              <Image source={{ uri: item.poster }} style={styles.poster} resizeMode="cover" />
+              <Image
+                source={
+                  item.poster
+                    ? { uri: item.poster }
+                    : {
+                        uri: 'https://dummyimage.com/500x750/111827/ffffff&text=No+Image',
+                      }
+                }
+                style={styles.poster}
+                resizeMode="cover"
+              />
               <Text style={styles.cardTitle} numberOfLines={1}>
                 {item.title}
               </Text>
-              <Text style={styles.cardTag}>{item.tag}</Text>
+              <Text style={styles.cardTag} numberOfLines={2}>
+                {item.overview || '줄거리가 없습니다.'}
+              </Text>
               <TouchableOpacity
                 style={[styles.wishButton, picked && styles.wishButtonActive]}
-                onPress={() => onToggle(item.id)}
+                onPress={() => onToggle(item)}
               >
                 <Text style={styles.wishButtonText}>{picked ? '♥ 찜됨' : '♡ 찜하기'}</Text>
               </TouchableOpacity>
@@ -436,6 +537,21 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 10,
     flexWrap: 'wrap',
+  },
+  searchRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    color: '#fff',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#1f2937',
   },
   secondaryButton: {
     borderRadius: 12,
