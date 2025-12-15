@@ -4,12 +4,13 @@
       <p class="page-eyebrow">My Recommendations</p>
       <h1>추천한 영화</h1>
       <p class="page-subtitle">
-        카드 클릭으로 추천한 영화들을 한 곳에서 확인하고 언제든 추천을 취소할 수 있어요.
+        카드 클릭으로 추천한 영화들을 한 곳에서 확인하고 필요하면 다시 취소할 수 있어요.
       </p>
     </header>
 
     <section class="panel recommended-panel">
-      <p v-if="!recommendations.length" class="empty-text">
+      <p v-if="loading" class="info-text">추천 목록을 불러오는 중입니다...</p>
+      <p v-else-if="!recommendations.length" class="empty-text">
         아직 추천한 영화가 없습니다. 메인, 인기, 검색 페이지에서 카드를 클릭해 추천을 추가해 보세요.
       </p>
 
@@ -20,8 +21,8 @@
           class="recommended-card"
         >
           <img
-            v-if="movie.poster_path"
-            :src="getPosterUrl(movie.poster_path)"
+            v-if="getPosterSrc(movie)"
+            :src="getPosterSrc(movie)"
             :alt="movie.title"
             loading="lazy"
           />
@@ -39,21 +40,23 @@
         </article>
       </div>
 
-      <p v-if="recommendations.length" class="info-text">
-        추천 목록은 Local Storage에 저장되며, 다음 방문 시에도 계속 유지됩니다.
+      <p v-if="!loading && recommendations.length" class="info-text">
+        추천 목록은 계정에 저장되어 웹과 앱에서 동일하게 확인할 수 있습니다.
       </p>
     </section>
   </main>
 </template>
 
 <script setup lang="ts">
-import { useRecommendations } from '@/composables/useRecommendations'
+import { useRecommendations, type RecommendedMovie } from '@/composables/useRecommendations'
 import type { TmdbMovie } from '@/services/tmdb'
 
-const { recommendations, toggleRecommendation } = useRecommendations()
+const { recommendations, loading, toggleRecommendation } = useRecommendations()
 
-function getPosterUrl(path: string | null) {
-  return path ? `https://image.tmdb.org/t/p/w300${path}` : ''
+function getPosterSrc(movie: RecommendedMovie) {
+  if (movie.poster_path) return `https://image.tmdb.org/t/p/w300${movie.poster_path}`
+  if (movie.poster) return movie.poster
+  return ''
 }
 
 function handleRemove(movieId: number) {

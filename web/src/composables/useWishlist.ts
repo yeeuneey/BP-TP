@@ -9,6 +9,7 @@ export interface WishlistMovie {
   id: number
   title: string
   poster_path: string | null
+  poster?: string | null
 }
 
 class WishlistManager {
@@ -47,13 +48,32 @@ class WishlistManager {
       const docRef = doc(db, 'wishlists', this.currentUserId)
       const snap = await getDoc(docRef)
       const items = snap.exists() ? ((snap.data().items as WishlistMovie[]) ?? []) : []
-      this.wishlist.value = items
+      const normalized = this.normalize(items)
+
+      if (normalized.length !== items.length) {
+        await setDoc(docRef, { items: normalized }, { merge: true })
+      }
+
+      this.wishlist.value = normalized
     } catch (err: unknown) {
       this.error.value = err instanceof Error ? err.message : '위시리스트를 불러오지 못했습니다.'
       this.wishlist.value = []
     } finally {
       this.loading.value = false
     }
+  }
+
+  private normalize(items: WishlistMovie[]): WishlistMovie[] {
+    return items.map((item) => ({
+      ...item,
+      poster_path: item.poster_path ?? this.extractPosterPath(item.poster),
+    }))
+  }
+
+  private extractPosterPath(poster?: string | null) {
+    if (!poster) return null
+    const match = poster.match(/image\.tmdb\.org\/t\/p\/[^/]+(\/.*)$/)
+    return match?.[1] ?? null
   }
 
   isInWishlist(movieId: number): boolean {
@@ -66,16 +86,16 @@ class WishlistManager {
     }
 
     const exists = this.isInWishlist(movie.id)
+    const payload: WishlistMovie = {
+      id: movie.id,
+      title: movie.title,
+      poster_path: movie.poster_path ?? null,
+      poster: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null,
+    }
+
     const updated = exists
       ? this.wishlist.value.filter((item) => item.id !== movie.id)
-      : [
-          ...this.wishlist.value,
-          {
-            id: movie.id,
-            title: movie.title,
-            poster_path: movie.poster_path ?? null,
-          },
-        ]
+      : [...this.wishlist.value, payload]
 
     const docRef = doc(db, 'wishlists', this.currentUserId)
     await setDoc(docRef, { items: updated }, { merge: true })

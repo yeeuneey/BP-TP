@@ -4,7 +4,7 @@
       <p class="page-eyebrow">My Collection</p>
       <h1>Wishlist</h1>
       <p class="page-subtitle">
-        마음에 드는 영화를 담아두고 기기 간에 동기화하세요.
+        마음에 드는 영화를 담아두고 기기 간에 동기화해 보세요.
       </p>
     </header>
 
@@ -20,8 +20,8 @@
           class="wishlist-card"
         >
           <img
-            v-if="movie.poster_path"
-            :src="getPosterUrl(movie.poster_path)"
+            v-if="getPosterSrc(movie)"
+            :src="getPosterSrc(movie)"
             :alt="movie.title"
             loading="lazy"
           />
@@ -58,15 +58,17 @@
 </template>
 
 <script setup lang="ts">
-import { useWishlist } from '@/composables/useWishlist'
+import { useWishlist, type WishlistMovie } from '@/composables/useWishlist'
 import { useRecommendations } from '@/composables/useRecommendations'
 import type { TmdbMovie } from '@/services/tmdb'
 
 const { wishlist, toggleWishlist } = useWishlist()
 const { toggleRecommendation, isRecommended } = useRecommendations()
 
-function getPosterUrl(path: string | null) {
-  return path ? `https://image.tmdb.org/t/p/w300${path}` : ''
+function getPosterSrc(movie: WishlistMovie) {
+  if (movie.poster_path) return `https://image.tmdb.org/t/p/w300${movie.poster_path}`
+  if (movie.poster) return movie.poster
+  return ''
 }
 
 function buildPayload(movieId: number) {
@@ -207,22 +209,19 @@ function handleRecommend(movieId: number) {
 
 .recommend-btn {
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid var(--color-border);
   background: transparent;
   color: #fff;
   font-size: 0.85rem;
   padding: 0.35rem 1.1rem;
   cursor: pointer;
-  transition: opacity 0.15s ease;
-}
-
-[data-theme='light'] .recommend-btn {
-  color: #0f172a;
-  border-color: rgba(15, 23, 42, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
 .recommend-btn:hover {
-  opacity: 0.75;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(229, 9, 20, 0.2);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .info-text {
