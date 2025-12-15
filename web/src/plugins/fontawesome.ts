@@ -12,6 +12,7 @@ import {
   faMinus,
   faMoon,
   faSliders,
+  faChevronDown,
   faPlus,
   faRightFromBracket,
   faStar,
