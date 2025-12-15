@@ -23,11 +23,13 @@ import {
 import {
   addDoc,
   collection,
-  deleteDoc,
+  doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
 } from 'firebase/firestore'
 import { auth, db } from './firebaseConfig'
 import {
@@ -63,6 +65,8 @@ export default function App() {
   const [busy, setBusy] = useState(false)
 
   const [popular, setPopular] = useState<Movie[]>([])
+  const [popularPage, setPopularPage] = useState(1)
+  const [hasMorePopular, setHasMorePopular] = useState(true)
   const [nowPlaying, setNowPlaying] = useState<Movie[]>([])
   const [recommend, setRecommend] = useState<Movie[]>([])
   const [wishlist, setWishlist] = useState<WishlistItem[]>([])
@@ -70,6 +74,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Movie[]>([])
   const [loadingMovies, setLoadingMovies] = useState(false)
+  const [loadingPopular, setLoadingPopular] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [fontScale, setFontScale] = useState(1)
   const [reduceMotion, setReduceMotion] = useState(false)
@@ -101,11 +106,31 @@ export default function App() {
     }))
   }
 
+  async function loadPopular(page = 1) {
+    setLoadingPopular(true)
+    try {
+      const pop = await fetchPopular(page)
+      const mapped = mapMovies(pop)
+      if (page === 1) {
+        setPopular(mapped)
+      } else {
+        setPopular((prev) => [...prev, ...mapped])
+      }
+      setPopularPage(page)
+      setHasMorePopular(mapped.length > 0)
+    } catch (err) {
+      console.error(err)
+      Alert.alert('TMDB 오류', '인기 영화를 불러오지 못했습니다.')
+    } finally {
+      setLoadingPopular(false)
+    }
+  }
+
   async function loadMovies() {
     setLoadingMovies(true)
     try {
-      const [pop, now, top] = await Promise.all([fetchPopular(), fetchNowPlaying(), fetchTopRated()])
-      setPopular(mapMovies(pop.slice(0, 10)))
+      const [now, top] = await Promise.all([fetchNowPlaying(), fetchTopRated()])
+      await loadPopular(1)
       setNowPlaying(mapMovies(now.slice(0, 10)))
       setRecommend(mapMovies(top.slice(0, 10)))
     } catch (err) {
@@ -118,13 +143,8 @@ export default function App() {
 
   async function fetchWishlist(uid: string) {
     try {
-      const snapshot = await getDocs(
-        query(collection(db, 'wishlists', uid, 'items'), orderBy('title', 'asc')),
-      )
-      const items: WishlistItem[] = snapshot.docs.map((d) => {
-        const data = d.data() as { id: number; title: string; poster?: string }
-        return { id: data.id, title: data.title, poster: data.poster }
-      })
+      const snap = await getDoc(doc(db, 'wishlists', uid))
+      const items = (snap.exists() ? (snap.data().items as WishlistItem[]) : []) ?? []
       setWishlist(items)
     } catch (err) {
       console.error('wishlist load error', err)
@@ -171,17 +191,13 @@ export default function App() {
       Alert.alert('로그인 필요', '먼저 로그인하세요.')
       return
     }
+    const docRef = doc(db, 'wishlists', user.uid)
     const exists = wishlist.find((w) => w.id === movie.id)
-    const docRef = collection(db, 'wishlists', user.uid, 'items')
-    if (exists) {
-      const snapshot = await getDocs(query(docRef, orderBy('id', 'asc')))
-      const target = snapshot.docs.find((d) => (d.data() as { id: number }).id === movie.id)
-      if (target) await deleteDoc(target.ref)
-      setWishlist((prev) => prev.filter((w) => w.id !== movie.id))
-    } else {
-      await addDoc(docRef, { id: movie.id, title: movie.title, poster: movie.poster })
-      setWishlist((prev) => [...prev, { id: movie.id, title: movie.title, poster: movie.poster }])
-    }
+    const next = exists
+      ? wishlist.filter((w) => w.id !== movie.id)
+      : [...wishlist, { id: movie.id, title: movie.title, poster: movie.poster }]
+    await setDoc(docRef, { items: next }, { merge: true })
+    setWishlist(next)
   }
 
   async function handleAddNote() {
@@ -278,6 +294,54 @@ export default function App() {
         }}
       />
     </View>
+  )
+
+  const PopularList = () => (
+    <FlatList
+      data={popular}
+      keyExtractor={(item) => String(item.id)}
+      renderItem={({ item }) => {
+        const picked = wishlist.some((w) => w.id === item.id)
+        return (
+          <View style={[styles.popularCard, { backgroundColor: c.card, borderColor: c.border }]}>
+            <Image
+              source={
+                item.poster
+                  ? { uri: item.poster }
+                  : { uri: 'https://dummyimage.com/500x750/111827/ffffff&text=No+Image' }
+              }
+              style={styles.popularPoster}
+              resizeMode="cover"
+            />
+            <View style={styles.popularBody}>
+              <Text style={[styles.cardTitle, { color: c.text, fontSize: fs(14) }]} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={[styles.cardTag, { color: c.muted, fontSize: fs(12) }]} numberOfLines={2}>
+                {item.overview || '줄거리가 없습니다.'}
+              </Text>
+              <TouchableOpacity
+                style={[styles.wishButton, picked && styles.wishButtonActive, { borderColor: c.border }]}
+                onPress={() => toggleWishlistItem(item)}
+              >
+                <Text style={[styles.wishButtonText, { color: c.text, fontSize: fs(12) }]}>
+                  {picked ? '♥ 찜됨' : '♡ 찜하기'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )
+      }}
+      onEndReachedThreshold={0.6}
+      onEndReached={() => {
+        if (hasMorePopular && !loadingPopular) {
+          loadPopular(popularPage + 1)
+        }
+      }}
+      ListFooterComponent={
+        loadingPopular ? <ActivityIndicator color={c.accent} style={{ marginVertical: 8 }} /> : null
+      }
+    />
   )
 
   if (!user) {
@@ -491,11 +555,7 @@ export default function App() {
           <>
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: c.text, fontSize: fs(18) }]}>지금 가장 뜨는 영화</Text>
-              {loadingMovies ? (
-                <ActivityIndicator color="#e50914" />
-              ) : (
-                <Section title="" data={popular} />
-              )}
+              {loadingMovies ? <ActivityIndicator color="#e50914" /> : <PopularList />}
             </View>
           </>
         )}
@@ -817,5 +877,22 @@ const styles = StyleSheet.create({
     color: '#e5e7eb',
     fontWeight: '700',
     fontSize: 12,
+  },
+  popularCard: {
+    flexDirection: 'row',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 10,
+  },
+  popularPoster: {
+    width: 100,
+    height: 150,
+    borderRadius: 8,
+    backgroundColor: '#111827',
+  },
+  popularBody: {
+    flex: 1,
   },
 })

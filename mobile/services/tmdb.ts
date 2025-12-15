@@ -36,7 +36,8 @@ interface TmdbResponse {
   results: TmdbMovie[]
 }
 
-export const fetchPopular = () => request<TmdbResponse>('/movie/popular').then((r) => r.results)
+export const fetchPopular = (page = 1) =>
+  request<TmdbResponse>('/movie/popular', { page }).then((r) => r.results)
 export const fetchNowPlaying = () =>
   request<TmdbResponse>('/movie/now_playing', { region: 'KR' }).then((r) => r.results)
 export const fetchTopRated = () => request<TmdbResponse>('/movie/top_rated').then((r) => r.results)
