@@ -1,15 +1,16 @@
 import { StatusBar } from 'expo-status-bar'
 import { useEffect, useMemo, useState } from 'react'
 import {
-  ActivityIndicator,
+  Alert,
   FlatList,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
+  ActivityIndicator,
 } from 'react-native'
 import {
   createUserWithEmailAndPassword,
@@ -23,10 +24,20 @@ import { auth, db } from './firebaseConfig'
 
 type Mode = 'login' | 'signup'
 
-interface Note {
+interface Movie {
   id: string
-  text: string
+  title: string
+  tag: string
+  category: 'popular' | 'now' | 'recommend'
 }
+
+const MOCK_MOVIES: Movie[] = [
+  { id: '1', title: 'Hunting Season', tag: '액션 • 서스펜스', category: 'popular' },
+  { id: '2', title: '웨이큰 업 데드맨', tag: '드라마', category: 'popular' },
+  { id: '3', title: '극장판 쥬라기', tag: '어드벤처', category: 'now' },
+  { id: '4', title: '신작 큐레이션', tag: '추천', category: 'recommend' },
+  { id: '5', title: '미드나이트 체이스', tag: '스릴러', category: 'recommend' },
+]
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('login')
@@ -35,33 +46,19 @@ export default function App() {
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [user, setUser] = useState<User | null>(null)
   const [busy, setBusy] = useState(false)
-  const [notes, setNotes] = useState<Note[]>([])
+  const [wishlist, setWishlist] = useState<Set<string>>(new Set())
+  const [notes, setNotes] = useState<string[]>([])
   const notesRef = useMemo(() => collection(db, 'mobile-notes'), [])
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (next) => {
       setUser(next)
-      if (next) {
-        fetchNotes()
-      } else {
-        setNotes([])
+      if (!next) {
+        setWishlist(new Set())
       }
     })
     return unsub
   }, [])
-
-  async function fetchNotes() {
-    try {
-      const snapshot = await getDocs(query(notesRef, orderBy('createdAt', 'desc')))
-      const data: Note[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        text: (doc.data().text as string) ?? '',
-      }))
-      setNotes(data)
-    } catch (err) {
-      console.error('Failed to load notes', err)
-    }
-  }
 
   async function handleAuth() {
     if (!email.trim() || !password) {
@@ -99,15 +96,22 @@ export default function App() {
     }
   }
 
+  function toggleWishlist(id: string) {
+    setWishlist((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   async function handleAddNote() {
-    if (!user) {
-      Alert.alert('로그인 필요', '먼저 로그인하세요.')
-      return
-    }
+    if (!user) return
     const text = `Hello from ${user.email ?? 'user'} @ ${new Date().toLocaleTimeString()}`
     try {
       await addDoc(notesRef, { text, createdAt: serverTimestamp(), uid: user.uid })
-      await fetchNotes()
+      const snapshot = await getDocs(query(notesRef, orderBy('createdAt', 'desc')))
+      setNotes(snapshot.docs.map((d) => (d.data().text as string) ?? ''))
     } catch (err) {
       const message = err instanceof Error ? err.message : '저장에 실패했습니다.'
       Alert.alert('오류', message)
@@ -116,185 +120,361 @@ export default function App() {
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.authContainer}>
         <StatusBar style="light" />
-        <Text style={styles.title}>{mode === 'login' ? '로그인' : '회원가입'}</Text>
-        <View style={styles.switchRow}>
-          <TouchableOpacity
-            style={[styles.modeButton, mode === 'login' && styles.modeButtonActive]}
-            onPress={() => setMode('login')}
-          >
-            <Text style={styles.modeButtonText}>로그인</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modeButton, mode === 'signup' && styles.modeButtonActive]}
-            onPress={() => setMode('signup')}
-          >
-            <Text style={styles.modeButtonText}>회원가입</Text>
-          </TouchableOpacity>
-        </View>
-        <TextInput
-          placeholder="이메일"
-          placeholderTextColor="#9ca3af"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          placeholder="비밀번호"
-          placeholderTextColor="#9ca3af"
-          secureTextEntry
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-        />
-        {mode === 'signup' && (
+        <Text style={styles.logo}>PB neteflix</Text>
+        <View style={styles.authCard}>
+          <View style={styles.authTabs}>
+            <TouchableOpacity
+              style={[styles.authTab, mode === 'login' && styles.authTabActive]}
+              onPress={() => setMode('login')}
+            >
+              <Text style={styles.authTabText}>LOGIN</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.authTab, mode === 'signup' && styles.authTabActive]}
+              onPress={() => setMode('signup')}
+            >
+              <Text style={styles.authTabText}>SIGN UP</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.authTitle}>{mode === 'login' ? '로그인' : 'Create account'}</Text>
           <TextInput
-            placeholder="비밀번호 확인"
+            placeholder="이메일"
+            placeholderTextColor="#9ca3af"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+          />
+          <TextInput
+            placeholder="비밀번호"
             placeholderTextColor="#9ca3af"
             secureTextEntry
             style={styles.input}
-            value={passwordConfirm}
-            onChangeText={setPasswordConfirm}
+            value={password}
+            onChangeText={setPassword}
           />
-        )}
+          {mode === 'signup' && (
+            <TextInput
+              placeholder="비밀번호 확인"
+              placeholderTextColor="#9ca3af"
+              secureTextEntry
+              style={styles.input}
+              value={passwordConfirm}
+              onChangeText={setPasswordConfirm}
+            />
+          )}
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleAuth} disabled={busy}>
-          {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>확인</Text>}
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handleAuth}
+            disabled={busy}
+            activeOpacity={0.85}
+          >
+            {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>시작하기</Text>}
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     )
   }
 
+  const popular = MOCK_MOVIES.filter((m) => m.category === 'popular')
+  const nowPlaying = MOCK_MOVIES.filter((m) => m.category === 'now')
+  const recommend = MOCK_MOVIES.filter((m) => m.category === 'recommend')
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.homeContainer}>
       <StatusBar style="light" />
-      <Text style={styles.title}>환영합니다</Text>
-      <Text style={styles.sub}>{user.email}</Text>
-      <TouchableOpacity style={styles.secondaryButton} onPress={handleAddNote} disabled={busy}>
-        <Text style={styles.secondaryText}>Firestore에 메모 저장</Text>
-      </TouchableOpacity>
-      <FlatList
-        data={notes}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-        renderItem={({ item }) => (
-          <View style={styles.noteCard}>
-            <Text style={styles.noteText}>{item.text}</Text>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.navBar}>
+          <Text style={styles.logo}>PB neteflix</Text>
+          <View style={styles.navLinks}>
+            <Text style={styles.navLink}>HOME</Text>
+            <Text style={styles.navLink}>POPULAR</Text>
+            <Text style={styles.navLink}>SEARCH</Text>
+            <Text style={styles.navLink}>WISHLIST</Text>
+            <Text style={styles.navLink}>RECOMMENDED</Text>
           </View>
-        )}
-        ListEmptyComponent={<Text style={styles.emptyText}>메모가 없습니다.</Text>}
-      />
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} disabled={busy}>
-        <Text style={styles.logoutText}>로그아웃</Text>
-      </TouchableOpacity>
+          <TouchableOpacity style={styles.logoutPill} onPress={handleLogout} disabled={busy}>
+            <Text style={styles.logoutPillText}>로그아웃</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.hero}>
+          <Text style={styles.heroEyebrow}>FOR YOU</Text>
+          <Text style={styles.heroTitle}>TMDB API로 큐레이션된 추천</Text>
+          <Text style={styles.heroSubtitle}>인기, 상영 중, 추천 작품을 한 곳에서 만나보세요.</Text>
+          <View style={styles.heroButtons}>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleAddNote} activeOpacity={0.85}>
+              <Text style={styles.primaryText}>Firestore에 메모 저장</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => Alert.alert('추천', '추천 리스트를 확인하세요!')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.secondaryText}>추천 보기</Text>
+            </TouchableOpacity>
+          </View>
+          {!!notes.length && (
+            <View style={styles.noteBubble}>
+              <Text style={styles.noteBubbleText}>{notes[0]}</Text>
+            </View>
+          )}
+        </View>
+
+        <Section title="지금 가장 뜨는 영화" data={popular} wishlist={wishlist} onToggle={toggleWishlist} />
+        <Section title="극장에서 막 나온 작품" data={nowPlaying} wishlist={wishlist} onToggle={toggleWishlist} />
+        <Section title="추천 큐레이션" data={recommend} wishlist={wishlist} onToggle={toggleWishlist} />
+      </ScrollView>
     </SafeAreaView>
   )
 }
 
+function Section({
+  title,
+  data,
+  wishlist,
+  onToggle,
+}: {
+  title: string
+  data: Movie[]
+  wishlist: Set<string>
+  onToggle: (id: string) => void
+}) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <FlatList
+        data={data}
+        keyExtractor={(item) => item.id}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        renderItem={({ item }) => {
+          const picked = wishlist.has(item.id)
+          return (
+            <View style={styles.card}>
+              <View style={styles.poster} />
+              <Text style={styles.cardTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={styles.cardTag}>{item.tag}</Text>
+              <TouchableOpacity
+                style={[styles.wishButton, picked && styles.wishButtonActive]}
+                onPress={() => onToggle(item.id)}
+              >
+                <Text style={styles.wishButtonText}>{picked ? '♥ 찜됨' : '♡ 찜하기'}</Text>
+              </TouchableOpacity>
+            </View>
+          )
+        }}
+      />
+    </View>
+  )
+}
+
 const styles = StyleSheet.create({
-  container: {
+  authContainer: {
     flex: 1,
-    backgroundColor: '#0b1021',
+    backgroundColor: '#05070f',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    justifyContent: 'center',
   },
-  title: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 8,
+  logo: {
+    color: '#e50914',
+    fontWeight: '800',
+    fontSize: 22,
   },
-  sub: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    marginBottom: 16,
+  authCard: {
+    marginTop: 12,
+    backgroundColor: '#0b1021',
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#111827',
   },
-  switchRow: {
+  authTabs: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 14,
   },
-  modeButton: {
+  authTab: {
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#1f2937',
   },
-  modeButtonActive: {
-    backgroundColor: '#1d4ed8',
-    borderColor: '#1d4ed8',
+  authTabActive: {
+    backgroundColor: '#e50914',
+    borderColor: '#e50914',
   },
-  modeButtonText: {
+  authTabText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  authTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 12,
   },
   input: {
-    backgroundColor: '#111827',
+    backgroundColor: '#0f172a',
     color: '#fff',
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    marginBottom: 12,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#1f2937',
   },
   primaryButton: {
     backgroundColor: '#e50914',
-    borderRadius: 10,
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
   },
   primaryText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 16,
+  },
+  homeContainer: {
+    flex: 1,
+    backgroundColor: '#05070f',
+  },
+  navBar: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  navLinks: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  navLink: {
+    color: '#e5e7eb',
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+  logoutPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#1f2937',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#0b1021',
+  },
+  logoutPillText: {
+    color: '#cbd5e1',
+    fontWeight: '600',
+  },
+  hero: {
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    gap: 6,
+  },
+  heroEyebrow: {
+    color: '#9ca3af',
+    letterSpacing: 2,
+    fontSize: 11,
+  },
+  heroTitle: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  heroSubtitle: {
+    color: '#cbd5e1',
+    fontSize: 13,
+  },
+  heroButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+    flexWrap: 'wrap',
   },
   secondaryButton: {
-    backgroundColor: '#1d4ed8',
-    borderRadius: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1f2937',
     paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 12,
+    paddingHorizontal: 14,
+    backgroundColor: '#0b1021',
   },
   secondaryText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  logoutButton: {
-    backgroundColor: '#111827',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#1f2937',
-  },
-  logoutText: {
     color: '#e5e7eb',
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  listContainer: {
-    paddingVertical: 12,
-  },
-  noteCard: {
+  noteBubble: {
+    marginTop: 10,
     backgroundColor: '#0f172a',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
+    padding: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#1f2937',
   },
-  noteText: {
+  noteBubbleText: {
     color: '#e5e7eb',
   },
-  emptyText: {
-    color: '#94a3b8',
-    textAlign: 'center',
-    marginTop: 20,
+  section: {
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  sectionTitle: {
+    color: '#e5e7eb',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  card: {
+    backgroundColor: '#0b1021',
+    borderRadius: 12,
+    padding: 10,
+    marginRight: 12,
+    width: 160,
+    borderWidth: 1,
+    borderColor: '#1f2937',
+  },
+  poster: {
+    height: 190,
+    borderRadius: 8,
+    backgroundColor: '#111827',
+    marginBottom: 10,
+  },
+  cardTitle: {
+    color: '#fff',
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  cardTag: {
+    color: '#9ca3af',
+    fontSize: 12,
+    marginBottom: 10,
+  },
+  wishButton: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#1f2937',
+    paddingVertical: 8,
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+  },
+  wishButtonActive: {
+    borderColor: '#e50914',
+    backgroundColor: 'rgba(229,9,20,0.12)',
+  },
+  wishButtonText: {
+    color: '#e5e7eb',
+    fontWeight: '700',
+    fontSize: 12,
   },
 })
