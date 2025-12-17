@@ -3,13 +3,17 @@ import { useEffect, useState } from 'react'
 import { Alert, Modal, ScrollView, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
+  GoogleAuthProvider,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  signInWithCredential,
   signInWithEmailAndPassword,
   signOut,
   type User,
 } from 'firebase/auth'
 import { collection, doc, getDoc, setDoc } from 'firebase/firestore'
+import * as AuthSession from 'expo-auth-session'
+import * as WebBrowser from 'expo-web-browser'
 
 import { auth, db } from './firebaseConfig'
 import { AuthScreen } from './screens/AuthScreen'
@@ -27,6 +31,12 @@ import {
   type TmdbMovie,
 } from './services/tmdb'
 import type { Mode, Movie, TabKey, WishlistItem } from './types'
+
+WebBrowser.maybeCompleteAuthSession()
+
+const googleClientId =
+  process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ??
+  '309869010872-di41gfk86ko8h76b6s3qusqsf44j31po.apps.googleusercontent.com'
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('login')
@@ -165,6 +175,40 @@ export default function App() {
     }
   }
 
+  async function handleGoogleLogin() {
+    if (!googleClientId) {
+      Alert.alert('구글 로그인 오류', 'Google Client ID가 설정되지 않았습니다.')
+      return
+    }
+    try {
+      setBusy(true)
+      const redirectUri = AuthSession.makeRedirectUri({ useProxy: true })
+      const authUrl =
+        'https://accounts.google.com/o/oauth2/v2/auth?' +
+        `client_id=${encodeURIComponent(googleClientId)}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        '&response_type=id_token' +
+        '&scope=' + encodeURIComponent('openid email profile') +
+        `&nonce=${Date.now()}`
+
+      const result = await AuthSession.startAsync({ authUrl })
+      if (result.type === 'success' && result.params?.id_token) {
+        const credential = GoogleAuthProvider.credential(result.params.id_token as string)
+        await signInWithCredential(auth, credential)
+      } else if (result.type === 'dismiss' || result.type === 'cancel') {
+        // user cancelled; no-op
+      } else {
+        const message = (result as AuthSession.AuthSessionResult & { errorCode?: string }).errorCode ?? '로그인에 실패했습니다.'
+        Alert.alert('구글 로그인 오류', message)
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '구글 로그인 중 오류가 발생했습니다.'
+      Alert.alert('구글 로그인 오류', message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function toggleWishlistItem(movie: Movie) {
     if (!user) {
       Alert.alert('로그인 필요', '먼저 로그인해주세요.')
@@ -228,6 +272,7 @@ export default function App() {
           colors={c}
           fontScale={fs}
           onSubmit={handleAuth}
+          onGoogleLogin={handleGoogleLogin}
         />
       </SafeAreaView>
     )

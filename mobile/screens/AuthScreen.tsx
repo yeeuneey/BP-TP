@@ -18,6 +18,7 @@ interface Props {
   colors: ThemeColors
   fontScale: (size: number) => number
   onSubmit: () => void
+  onGoogleLogin: () => void
 }
 
 export function AuthScreen({
@@ -33,6 +34,7 @@ export function AuthScreen({
   colors,
   fontScale,
   onSubmit,
+  onGoogleLogin,
 }: Props) {
   const fs = fontScale
 
@@ -102,6 +104,15 @@ export function AuthScreen({
           activeOpacity={0.85}
         >
           {busy ? <ActivityIndicator color="#fff" /> : <Text style={[styles.primaryText, { fontSize: fs(16) }]}>시작하기</Text>}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.googleButton, { borderColor: colors.border }]}
+          onPress={onGoogleLogin}
+          disabled={busy}
+          activeOpacity={0.85}
+        >
+          <Text style={[styles.googleButtonText, { color: colors.text, fontSize: fs(14) }]}>Google로 로그인</Text>
         </TouchableOpacity>
       </View>
     </>

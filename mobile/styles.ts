@@ -63,6 +63,18 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 6,
   },
+  googleButton: {
+    marginTop: 10,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1f2937',
+    backgroundColor: '#0f172a',
+  },
+  googleButtonText: {
+    fontWeight: '700',
+  },
   primaryText: {
     color: '#fff',
     fontWeight: '700',

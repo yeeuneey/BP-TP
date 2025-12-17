@@ -38,6 +38,8 @@
         "appId": "1:380986901872:web:99cbb839cf3067ad46f94d"
       },
       "tmdbApiKey": "4949db1ffed8869c4dcc9946f367c2c8"
+      ,
+      "googleClientId": "309869010872-di41gfk86ko8h76b6s3qusqsf44j31po.apps.googleusercontent.com"
     }
   }
 }
