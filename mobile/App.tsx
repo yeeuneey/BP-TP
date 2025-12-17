@@ -66,12 +66,12 @@ export default function App() {
   const [navOpen, setNavOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [currentTab, setCurrentTab] = useState<TabKey>('home')
+
+  const notesRef = useMemo(() => collection(db, 'mobile-notes'), [])
   const closePanels = () => {
     setNavOpen(false)
     setSettingsOpen(false)
   }
-
-  const notesRef = useMemo(() => collection(db, 'mobile-notes'), [])
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (next) => {
@@ -292,159 +292,169 @@ export default function App() {
           if (navOpen || settingsOpen) closePanels()
         }}
       >
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={styles.navBar}>
+        <View style={{ flex: 1 }}>
+          <View style={[styles.navBar, { backgroundColor: c.bg }]}>
             <Text style={[styles.logo, { color: c.accent }]}>PB neteflix</Text>
             <TouchableOpacity
               style={[styles.menuButton, { borderColor: c.border }]}
               onPress={() => {
-              setNavOpen((v) => !v)
-              setSettingsOpen(false)
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={{ color: c.text, fontWeight: '700' }}>MENU</Text>
-          </TouchableOpacity>
-          <View style={styles.navActions}>
-            <TouchableOpacity
-              style={styles.menuButton}
-              onPress={() => {
-                setSettingsOpen((v) => !v)
-                setNavOpen(false)
+                setNavOpen((v) => !v)
+                setSettingsOpen(false)
               }}
               activeOpacity={0.8}
             >
-              <Text style={{ color: c.text, fontWeight: '700' }}>SETTINGS</Text>
+              <Text style={{ color: c.text, fontWeight: '700' }}>MENU</Text>
             </TouchableOpacity>
-          </View>
-        </View>
-        {navOpen && (
-          <View style={[styles.navDropdown, { backgroundColor: c.card, borderColor: c.border }]}>
-            {(Object.keys(tabLabel) as Array<keyof typeof tabLabel>).map((key) => (
+            <View style={styles.navActions}>
               <TouchableOpacity
-                key={key}
+                style={styles.menuButton}
                 onPress={() => {
-                  setCurrentTab(key)
-                  closePanels()
+                  setSettingsOpen((v) => !v)
+                  setNavOpen(false)
                 }}
-                style={[styles.navRow, currentTab === key && { borderLeftWidth: 2, borderLeftColor: c.accent }]}
+                activeOpacity={0.8}
               >
-                <Text style={[styles.navLink, { color: c.text }]}>{tabLabel[key]}</Text>
+                <Text style={{ color: c.text, fontWeight: '700' }}>SETTINGS</Text>
               </TouchableOpacity>
-            ))}
+            </View>
           </View>
-        )}
 
-        {settingsOpen && (
-          <View style={[styles.navDropdown, { backgroundColor: c.card, borderColor: c.border }]}>
-            <TouchableOpacity
-              style={styles.navRow}
-              onPress={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            >
-              <Text style={[styles.navLink, { color: c.text }]}>
-                테마: {theme === 'dark' ? '다크' : '라이트'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.navRow}
-              onPress={() => setFontScale((s) => Math.min(1.2, s + 0.05))}
-            >
-              <Text style={[styles.navLink, { color: c.text }]}>글자 크게</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.navRow}
-              onPress={() => setFontScale((s) => Math.max(0.9, s - 0.05))}
-            >
-              <Text style={[styles.navLink, { color: c.text }]}>글자 작게</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.navRow}
-              onPress={() => setReduceMotion((v) => !v)}
-            >
-              <Text style={[styles.navLink, { color: c.text }]}>
-                애니메이션 {reduceMotion ? '끄기' : '켜기'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.navRow} onPress={handleLogout} disabled={busy}>
-              <Text style={[styles.navLink, { color: c.text }]}>로그아웃</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          {navOpen && (
+            <View style={[styles.navDropdown, { backgroundColor: c.card, borderColor: c.border }]}>
+              {(Object.keys(tabLabel) as Array<keyof typeof tabLabel>).map((key) => (
+                <TouchableOpacity
+                  key={key}
+                  onPress={() => {
+                    setCurrentTab(key)
+                    closePanels()
+                  }}
+                  style={[styles.navRow, currentTab === key && { borderLeftWidth: 2, borderLeftColor: c.accent }]}
+                >
+                  <Text style={[styles.navLink, { color: c.text }]}>{tabLabel[key]}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
-        {currentTab === 'home' && (
-          <HomeScreen
-            colors={c}
-            fontScale={fs}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            onSearch={handleSearch}
-            notes={notes}
-            onAddNote={handleAddNote}
-            loadingMovies={loadingMovies}
-            popular={popular}
-            nowPlaying={nowPlaying}
-            recommend={recommend}
-            wishlist={wishlist}
-            recommended={recommendedList}
-            onToggleWishlist={toggleWishlistItem}
-            onToggleRecommended={toggleRecommendedItem}
-            setCurrentTab={setCurrentTab}
-          />
-        )}
+          {settingsOpen && (
+            <View style={[styles.navDropdown, { backgroundColor: c.card, borderColor: c.border }]}>
+              <TouchableOpacity
+                style={styles.navRow}
+                onPress={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              >
+                <Text style={[styles.navLink, { color: c.text }]}>
+                  테마: {theme === 'dark' ? '다크' : '라이트'}
+                </Text>
+              </TouchableOpacity>
+              <View style={[styles.navRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+                <Text style={[styles.navLink, { color: c.text }]}>글자 크기</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    style={[styles.menuButton, { paddingVertical: 6, paddingHorizontal: 10, marginLeft: 0, borderColor: c.border }]}
+                    onPress={() => setFontScale((s) => Math.max(0.9, Number((s - 0.05).toFixed(2))))}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={{ color: c.text, fontWeight: '700' }}>-</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.menuButton, { paddingVertical: 6, paddingHorizontal: 10, marginLeft: 0, borderColor: c.border }]}
+                    onPress={() => setFontScale((s) => Math.min(1.2, Number((s + 0.05).toFixed(2))))}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={{ color: c.text, fontWeight: '700' }}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.navRow}
+                onPress={() => setReduceMotion((v) => !v)}
+              >
+                <Text style={[styles.navLink, { color: c.text }]}>
+                  애니메이션 {reduceMotion ? '끄기' : '켜기'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.navRow} onPress={handleLogout} disabled={busy}>
+                <Text style={[styles.navLink, { color: c.text }]}>로그아웃</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-        {currentTab === 'popular' && (
-          <PopularScreen
-            colors={c}
-            fontScale={fs}
-            loading={loadingPopular}
-            popular={popular}
-            wishlist={wishlist}
-            hasMore={hasMorePopular}
-            page={popularPage}
-            onLoadMore={(nextPage) => !loadingPopular && loadPopular(nextPage)}
-            onToggleWishlist={toggleWishlistItem}
-          />
-        )}
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {currentTab === 'home' && (
+              <HomeScreen
+                colors={c}
+                fontScale={fs}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                onSearch={handleSearch}
+                notes={notes}
+                onAddNote={handleAddNote}
+                loadingMovies={loadingMovies}
+                popular={popular}
+                nowPlaying={nowPlaying}
+                recommend={recommend}
+                wishlist={wishlist}
+                recommended={recommendedList}
+                onToggleWishlist={toggleWishlistItem}
+                onToggleRecommended={toggleRecommendedItem}
+                setCurrentTab={setCurrentTab}
+              />
+            )}
 
-        {currentTab === 'search' && (
-          <SearchScreen
-            colors={c}
-            fontScale={fs}
-            loading={loadingMovies}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            onSearch={handleSearch}
-            results={searchResults}
-            wishlist={wishlist}
-            recommended={recommendedList}
-            onToggleWishlist={toggleWishlistItem}
-            onToggleRecommended={toggleRecommendedItem}
-          />
-        )}
+            {currentTab === 'popular' && (
+              <PopularScreen
+                colors={c}
+                fontScale={fs}
+                loading={loadingPopular}
+                popular={popular}
+                wishlist={wishlist}
+                hasMore={hasMorePopular}
+                page={popularPage}
+                onLoadMore={(nextPage) => !loadingPopular && loadPopular(nextPage)}
+                onToggleWishlist={toggleWishlistItem}
+              />
+            )}
 
-        {currentTab === 'wishlist' && (
-          <WishlistScreen
-            colors={c}
-            fontScale={fs}
-            wishlist={wishlist}
-            recommended={recommendedList}
-            onToggleWishlist={toggleWishlistItem}
-            onToggleRecommended={toggleRecommendedItem}
-          />
-        )}
+            {currentTab === 'search' && (
+              <SearchScreen
+                colors={c}
+                fontScale={fs}
+                loading={loadingMovies}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                onSearch={handleSearch}
+                results={searchResults}
+                wishlist={wishlist}
+                recommended={recommendedList}
+                onToggleWishlist={toggleWishlistItem}
+                onToggleRecommended={toggleRecommendedItem}
+              />
+            )}
 
-        {currentTab === 'recommended' && (
-          <RecommendedScreen
-            colors={c}
-            fontScale={fs}
-            recommendedList={recommendedList}
-            recommendMovies={recommend}
-            wishlist={wishlist}
-            onToggleWishlist={toggleWishlistItem}
-            onToggleRecommended={toggleRecommendedItem}
-          />
-        )}
-        </ScrollView>
+            {currentTab === 'wishlist' && (
+              <WishlistScreen
+                colors={c}
+                fontScale={fs}
+                wishlist={wishlist}
+                recommended={recommendedList}
+                onToggleWishlist={toggleWishlistItem}
+                onToggleRecommended={toggleRecommendedItem}
+              />
+            )}
+
+            {currentTab === 'recommended' && (
+              <RecommendedScreen
+                colors={c}
+                fontScale={fs}
+                recommendedList={recommendedList}
+                recommendMovies={recommend}
+                wishlist={wishlist}
+                onToggleWishlist={toggleWishlistItem}
+                onToggleRecommended={toggleRecommendedItem}
+              />
+            )}
+          </ScrollView>
+        </View>
       </TouchableWithoutFeedback>
     </SafeAreaView>
   )
