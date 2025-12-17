@@ -11,8 +11,6 @@ interface Props {
   searchQuery: string
   setSearchQuery: (value: string) => void
   onSearch: () => void
-  notes: string[]
-  onAddNote: () => void
   loadingMovies: boolean
   popular: Movie[]
   nowPlaying: Movie[]
@@ -27,8 +25,6 @@ export function HomeScreen({
   searchQuery,
   setSearchQuery,
   onSearch,
-  notes,
-  onAddNote,
   loadingMovies,
   popular,
   nowPlaying,
@@ -66,23 +62,9 @@ export function HomeScreen({
               setCurrentTab('search')
             }}
             activeOpacity={0.85}
-          >
-            <Text style={[styles.secondaryText, { color: colors.text }]}>검색</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.heroButtons}>
-          <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: colors.accent }]}
-            onPress={onAddNote}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.primaryText}>Firestore에 메모 쓰기</Text>
-          </TouchableOpacity>
-          {!!notes.length && (
-            <View style={[styles.noteBubble, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.noteBubbleText, { color: colors.text }]}>{notes[0]}</Text>
-            </View>
-          )}
+        >
+          <Text style={[styles.secondaryText, { color: colors.text }]}>검색</Text>
+        </TouchableOpacity>
         </View>
       </View>
       {loadingMovies && <ActivityIndicator color="#e50914" style={{ marginVertical: 10 }} />}

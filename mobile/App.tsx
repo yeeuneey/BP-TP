@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert, Modal, ScrollView, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
@@ -9,17 +9,7 @@ import {
   signOut,
   type User,
 } from 'firebase/auth'
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  setDoc,
-} from 'firebase/firestore'
+import { collection, doc, getDoc, setDoc } from 'firebase/firestore'
 
 import { auth, db } from './firebaseConfig'
 import { AuthScreen } from './screens/AuthScreen'
@@ -51,7 +41,6 @@ export default function App() {
   const [hasMorePopular, setHasMorePopular] = useState(true)
   const [nowPlaying, setNowPlaying] = useState<Movie[]>([])
   const [wishlist, setWishlist] = useState<WishlistItem[]>([])
-  const [notes, setNotes] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Movie[]>([])
   const [loadingMovies, setLoadingMovies] = useState(false)
@@ -63,8 +52,6 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [currentTab, setCurrentTab] = useState<TabKey>('home')
   const [confirmMovie, setConfirmMovie] = useState<Movie | null>(null)
-
-  const notesRef = useMemo(() => collection(db, 'mobile-notes'), [])
   const closePanels = () => {
     setNavOpen(false)
     setSettingsOpen(false)
@@ -194,19 +181,6 @@ export default function App() {
     const next = [...wishlist, { id: movie.id, title: movie.title, poster: movie.poster }]
     await setDoc(docRef, { items: next }, { merge: true })
     setWishlist(next)
-  }
-
-  async function handleAddNote() {
-    if (!user) return
-    const text = `Hello from ${user.email ?? 'user'} @ ${new Date().toLocaleTimeString()}`
-    try {
-      await addDoc(notesRef, { text, createdAt: serverTimestamp(), uid: user.uid })
-      const snapshot = await getDocs(query(notesRef, orderBy('createdAt', 'desc')))
-      setNotes(snapshot.docs.map((d) => (d.data().text as string) ?? ''))
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '메모 저장에 실패했어요.'
-      Alert.alert('오류', message)
-    }
   }
 
   async function handleSearch() {
@@ -362,14 +336,12 @@ export default function App() {
               <HomeScreen
                 colors={c}
                 fontScale={fs}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                onSearch={handleSearch}
-                notes={notes}
-                onAddNote={handleAddNote}
-                loadingMovies={loadingMovies}
-                popular={popular}
-                nowPlaying={nowPlaying}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            onSearch={handleSearch}
+            loadingMovies={loadingMovies}
+            popular={popular}
+            nowPlaying={nowPlaying}
             wishlist={wishlist}
             onToggleWishlist={toggleWishlistItem}
             setCurrentTab={setCurrentTab}
