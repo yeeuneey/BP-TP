@@ -201,9 +201,24 @@ export default function App() {
     }
     const docRef = doc(db, 'wishlists', user.uid)
     const exists = wishlist.find((w) => w.id === movie.id)
-    const next = exists
-      ? wishlist.filter((w) => w.id !== movie.id)
-      : [...wishlist, { id: movie.id, title: movie.title, poster: movie.poster }]
+
+    if (exists) {
+      Alert.alert('삭제 확인', '위시리스트에서 삭제하시겠습니까?', [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '확인',
+          style: 'destructive',
+          onPress: async () => {
+            const next = wishlist.filter((w) => w.id !== movie.id)
+            await setDoc(docRef, { items: next }, { merge: true })
+            setWishlist(next)
+          },
+        },
+      ])
+      return
+    }
+
+    const next = [...wishlist, { id: movie.id, title: movie.title, poster: movie.poster }]
     await setDoc(docRef, { items: next }, { merge: true })
     setWishlist(next)
   }
