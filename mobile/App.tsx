@@ -13,6 +13,7 @@ import {
 } from 'firebase/auth'
 import { collection, doc, getDoc, setDoc } from 'firebase/firestore'
 import * as AuthSession from 'expo-auth-session'
+import { makeRedirectUri, ResponseType, useAuthRequest } from 'expo-auth-session'
 import * as WebBrowser from 'expo-web-browser'
 
 import { auth, db } from './firebaseConfig'
@@ -36,7 +37,11 @@ WebBrowser.maybeCompleteAuthSession()
 
 const googleClientId =
   process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ??
-  '309869010872-di41gfk86ko8h76b6s3qusqsf44j31po.apps.googleusercontent.com'
+  '309869010872-mngfli8na798j5e7hgnu7qp4sn928fq1.apps.googleusercontent.com'
+const googleDiscovery = {
+  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+  tokenEndpoint: 'https://oauth2.googleapis.com/token',
+}
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('login')
@@ -62,6 +67,20 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [currentTab, setCurrentTab] = useState<TabKey>('home')
   const [confirmMovie, setConfirmMovie] = useState<Movie | null>(null)
+  const [request, response, promptAsync] = useAuthRequest(
+    {
+      clientId: googleClientId,
+      responseType: ResponseType.IdToken,
+      scopes: ['openid', 'profile', 'email'],
+      redirectUri: makeRedirectUri({ useProxy: true }),
+      prompt: 'select_account',
+      usePKCE: false,
+      extraParams: {
+        nonce: `${Date.now()}`,
+      },
+    },
+    googleDiscovery
+  )
   const closePanels = () => {
     setNavOpen(false)
     setSettingsOpen(false)
@@ -140,6 +159,24 @@ export default function App() {
     }
   }
 
+  useEffect(() => {
+    const handleGoogleResponse = async () => {
+      if (response?.type === 'success' && response.params?.id_token) {
+        try {
+          setBusy(true)
+          const credential = GoogleAuthProvider.credential(response.params.id_token as string)
+          await signInWithCredential(auth, credential)
+        } catch (err) {
+          const message = err instanceof Error ? err.message : '구글 로그인 중 오류가 발생했습니다.'
+          Alert.alert('구글 로그인 오류', message)
+        } finally {
+          setBusy(false)
+        }
+      }
+    }
+    handleGoogleResponse()
+  }, [response])
+
   async function handleAuth() {
     if (!email.trim() || !password) {
       Alert.alert('입력 필요', '이메일과 비밀번호를 입력해주세요.')
@@ -180,27 +217,13 @@ export default function App() {
       Alert.alert('구글 로그인 오류', 'Google Client ID가 설정되지 않았습니다.')
       return
     }
+    if (!request) {
+      Alert.alert('구글 로그인 오류', '로그인 요청을 초기화하지 못했습니다.')
+      return
+    }
     try {
       setBusy(true)
-      const redirectUri = AuthSession.makeRedirectUri({ useProxy: true })
-      const authUrl =
-        'https://accounts.google.com/o/oauth2/v2/auth?' +
-        `client_id=${encodeURIComponent(googleClientId)}` +
-        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-        '&response_type=id_token' +
-        '&scope=' + encodeURIComponent('openid email profile') +
-        `&nonce=${Date.now()}`
-
-      const result = await AuthSession.startAsync({ authUrl })
-      if (result.type === 'success' && result.params?.id_token) {
-        const credential = GoogleAuthProvider.credential(result.params.id_token as string)
-        await signInWithCredential(auth, credential)
-      } else if (result.type === 'dismiss' || result.type === 'cancel') {
-        // user cancelled; no-op
-      } else {
-        const message = (result as AuthSession.AuthSessionResult & { errorCode?: string }).errorCode ?? '로그인에 실패했습니다.'
-        Alert.alert('구글 로그인 오류', message)
-      }
+      await promptAsync({ useProxy: true })
     } catch (err) {
       const message = err instanceof Error ? err.message : '구글 로그인 중 오류가 발생했습니다.'
       Alert.alert('구글 로그인 오류', message)
