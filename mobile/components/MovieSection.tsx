@@ -1,5 +1,4 @@
-import { Image } from 'expo-image'
-import { FlatList, Text, TouchableOpacity, View } from 'react-native'
+import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native'
 
 import type { ThemeColors } from '../theme'
 import { styles } from '../styles'
@@ -41,16 +40,27 @@ export function MovieSection({
           const rec = recommended.some((w) => w.id === item.id)
           return (
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <TouchableOpacity
+                style={[
+                  styles.wishHeart,
+                  picked && styles.wishHeartActive,
+                  { borderColor: colors.border },
+                ]}
+                onPress={() => onToggleWishlist(item)}
+                activeOpacity={0.8}
+              >
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 18 }}>
+                  {picked ? '❤' : '❤'}
+                </Text>
+              </TouchableOpacity>
               <Image
                 source={
                   item.poster
-                    ? { uri: item.poster, cachePolicy: 'memory-disk' }
+                    ? { uri: item.poster }
                     : { uri: 'https://dummyimage.com/500x750/111827/ffffff&text=No+Image' }
                 }
-                placeholder={require('../assets/icon.png')}
                 style={styles.poster}
-                contentFit="cover"
-                transition={150}
+                resizeMode="cover"
               />
               <Text style={[styles.cardTitle, { color: colors.text, fontSize: fs(14) }]} numberOfLines={1}>
                 {item.title}
@@ -58,14 +68,6 @@ export function MovieSection({
               <Text style={[styles.cardTag, { color: colors.muted, fontSize: fs(12) }]} numberOfLines={2}>
                 {item.overview || '줄거리가 없습니다.'}
               </Text>
-              <TouchableOpacity
-                style={[styles.wishButton, picked && styles.wishButtonActive, { borderColor: colors.border }]}
-                onPress={() => onToggleWishlist(item)}
-              >
-                <Text style={[styles.wishButtonText, { color: colors.text, fontSize: fs(12) }]}>
-                  {picked ? '취소됨' : '위시리스트'}
-                </Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.wishButton,

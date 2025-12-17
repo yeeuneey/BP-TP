@@ -1,5 +1,4 @@
-import { Image } from 'expo-image'
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Image, Text, TouchableOpacity, View } from 'react-native'
 
 import type { ThemeColors } from '../theme'
 import { styles } from '../styles'
@@ -35,17 +34,31 @@ export function PopularList({
       {data.map((item) => {
         const picked = wishlist.some((w) => w.id === item.id)
         return (
-          <View key={item.id} style={[styles.popularCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View
+            key={item.id}
+            style={[styles.popularCard, { backgroundColor: colors.card, borderColor: colors.border, position: 'relative' }]}
+          >
+            <TouchableOpacity
+              style={[
+                styles.wishHeart,
+                picked && styles.wishHeartActive,
+                { borderColor: colors.border, top: 10, right: 10 },
+              ]}
+              onPress={() => onToggleWishlist(item)}
+              activeOpacity={0.8}
+            >
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 18 }}>
+                {picked ? '❤' : '❤'}
+              </Text>
+            </TouchableOpacity>
             <Image
               source={
                 item.poster
-                  ? { uri: item.poster, cachePolicy: 'memory-disk' }
+                  ? { uri: item.poster }
                   : { uri: 'https://dummyimage.com/500x750/111827/ffffff&text=No+Image' }
               }
-              placeholder={require('../assets/icon.png')}
               style={styles.popularPoster}
-              contentFit="cover"
-              transition={150}
+              resizeMode="cover"
             />
             <View style={styles.popularBody}>
               <Text style={[styles.cardTitle, { color: colors.text, fontSize: fs(14) }]} numberOfLines={1}>
@@ -54,14 +67,6 @@ export function PopularList({
               <Text style={[styles.cardTag, { color: colors.muted, fontSize: fs(12) }]} numberOfLines={2}>
                 {item.overview || '줄거리가 없습니다.'}
               </Text>
-              <TouchableOpacity
-                style={[styles.wishButton, picked && styles.wishButtonActive, { borderColor: colors.border }]}
-                onPress={() => onToggleWishlist(item)}
-              >
-                <Text style={[styles.wishButtonText, { color: colors.text, fontSize: fs(12) }]}>
-                  {picked ? '취소됨' : '위시리스트'}
-                </Text>
-              </TouchableOpacity>
             </View>
           </View>
         )
