@@ -1,4 +1,5 @@
-import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native'
+import { Image } from 'expo-image'
+import { FlatList, Text, TouchableOpacity, View } from 'react-native'
 
 import type { ThemeColors } from '../theme'
 import { styles } from '../styles'
@@ -43,11 +44,13 @@ export function MovieSection({
               <Image
                 source={
                   item.poster
-                    ? { uri: item.poster }
+                    ? { uri: item.poster, cachePolicy: 'memory-disk' }
                     : { uri: 'https://dummyimage.com/500x750/111827/ffffff&text=No+Image' }
                 }
+                placeholder={require('../assets/icon.png')}
                 style={styles.poster}
-                resizeMode="cover"
+                contentFit="cover"
+                transition={150}
               />
               <Text style={[styles.cardTitle, { color: colors.text, fontSize: fs(14) }]} numberOfLines={1}>
                 {item.title}

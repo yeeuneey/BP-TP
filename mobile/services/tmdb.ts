@@ -44,5 +44,6 @@ export const fetchTopRated = () => request<TmdbResponse>('/movie/top_rated').the
 export const searchMovies = (query: string) =>
   request<TmdbResponse>('/search/movie', { query }).then((r) => r.results)
 
+// Use a smaller width to reduce payload and speed up scrolling.
 export const posterUrl = (path: string | null) =>
-  path ? `https://image.tmdb.org/t/p/w500${path}` : undefined
+  path ? `https://image.tmdb.org/t/p/w342${path}` : undefined

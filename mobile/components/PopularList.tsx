@@ -1,4 +1,5 @@
-import { ActivityIndicator, Image, Text, TouchableOpacity, View } from 'react-native'
+import { Image } from 'expo-image'
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native'
 
 import type { ThemeColors } from '../theme'
 import { styles } from '../styles'
@@ -38,11 +39,13 @@ export function PopularList({
             <Image
               source={
                 item.poster
-                  ? { uri: item.poster }
+                  ? { uri: item.poster, cachePolicy: 'memory-disk' }
                   : { uri: 'https://dummyimage.com/500x750/111827/ffffff&text=No+Image' }
               }
+              placeholder={require('../assets/icon.png')}
               style={styles.popularPoster}
-              resizeMode="cover"
+              contentFit="cover"
+              transition={150}
             />
             <View style={styles.popularBody}>
               <Text style={[styles.cardTitle, { color: colors.text, fontSize: fs(14) }]} numberOfLines={1}>
