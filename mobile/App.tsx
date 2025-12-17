@@ -288,7 +288,10 @@ export default function App() {
           <Text style={[styles.logo, { color: c.accent }]}>PB neteflix</Text>
           <TouchableOpacity
             style={[styles.menuButton, { borderColor: c.border }]}
-            onPress={() => setNavOpen((v) => !v)}
+            onPress={() => {
+              setNavOpen((v) => !v)
+              setSettingsOpen(false)
+            }}
             activeOpacity={0.8}
           >
             <Text style={{ color: c.text, fontWeight: '700' }}>MENU</Text>
@@ -296,7 +299,10 @@ export default function App() {
           <View style={styles.navActions}>
             <TouchableOpacity
               style={styles.menuButton}
-              onPress={() => setSettingsOpen((v) => !v)}
+              onPress={() => {
+                setSettingsOpen((v) => !v)
+                setNavOpen(false)
+              }}
               activeOpacity={0.8}
             >
               <Text style={{ color: c.text, fontWeight: '700' }}>SETTINGS</Text>
