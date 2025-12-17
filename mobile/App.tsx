@@ -61,7 +61,7 @@ export default function App() {
   const [loadingMovies, setLoadingMovies] = useState(false)
   const [loadingPopular, setLoadingPopular] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
-  const [fontScale, setFontScale] = useState(1)
+  const [fontLevel, setFontLevel] = useState(4) // 1~7 -> 0.90~1.20
   const [reduceMotion, setReduceMotion] = useState(false)
   const [navOpen, setNavOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -254,7 +254,9 @@ export default function App() {
   }
 
   const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
-  const fs = (size: number) => size * fontScale
+  const fontSteps = [0.9, 0.95, 1, 1.05, 1.1, 1.15, 1.2] as const
+  const currentFontScale = fontSteps[Math.min(Math.max(fontLevel, 1), 7) - 1]
+  const fs = (size: number) => size * currentFontScale
   const tabLabel: Record<TabKey, string> = {
     home: 'HOME',
     popular: 'POPULAR',
@@ -348,17 +350,20 @@ export default function App() {
               </TouchableOpacity>
               <View style={[styles.navRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
                 <Text style={[styles.navLink, { color: c.text }]}>글자 크기</Text>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
                   <TouchableOpacity
                     style={[styles.menuButton, { paddingVertical: 6, paddingHorizontal: 10, marginLeft: 0, borderColor: c.border }]}
-                    onPress={() => setFontScale((s) => Math.max(0.9, Number((s - 0.05).toFixed(2))))}
+                    onPress={() => setFontLevel((lvl) => Math.max(1, lvl - 1))}
                     activeOpacity={0.8}
                   >
                     <Text style={{ color: c.text, fontWeight: '700' }}>-</Text>
                   </TouchableOpacity>
+                  <Text style={{ color: c.text, fontWeight: '700', minWidth: 44, textAlign: 'center' }}>
+                    {fontLevel}
+                  </Text>
                   <TouchableOpacity
                     style={[styles.menuButton, { paddingVertical: 6, paddingHorizontal: 10, marginLeft: 0, borderColor: c.border }]}
-                    onPress={() => setFontScale((s) => Math.min(1.2, Number((s + 0.05).toFixed(2))))}
+                    onPress={() => setFontLevel((lvl) => Math.min(7, lvl + 1))}
                     activeOpacity={0.8}
                   >
                     <Text style={{ color: c.text, fontWeight: '700' }}>+</Text>
