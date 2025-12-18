@@ -66,7 +66,7 @@ export function PopularList({
                 {item.title}
               </Text>
               <Text style={[styles.cardTag, { color: colors.muted, fontSize: fs(12) }]} numberOfLines={2}>
-                {item.overview || '??? ????.'}
+                {item.overview || '줄거리를 준비 중이에요.'}
               </Text>
             </View>
           </View>
