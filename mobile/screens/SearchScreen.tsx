@@ -1,4 +1,4 @@
-import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
 
 import { MovieSection } from '../components/MovieSection'
 import type { ThemeColors } from '../theme'
@@ -42,14 +42,21 @@ export function SearchScreen({
           onChangeText={setSearchQuery}
           onSubmitEditing={onSearch}
           returnKeyType="search"
-        />
-        <TouchableOpacity
-          style={[styles.secondaryButton, { borderColor: colors.border, backgroundColor: colors.card }]}
-          onPress={onSearch}
-          activeOpacity={0.85}
-        >
-          <Text style={[styles.secondaryText, { color: colors.text }]}>검색</Text>
-        </TouchableOpacity>
+      />
+      <Pressable
+        style={({ pressed }) => [
+          styles.secondaryButton,
+          {
+            borderColor: pressed ? colors.accent : colors.border,
+            backgroundColor: pressed ? colors.accent : colors.card,
+          },
+        ]}
+        onPress={onSearch}
+      >
+        {({ pressed }) => (
+          <Text style={[styles.secondaryText, { color: pressed ? '#fff' : colors.text }]}>검색</Text>
+        )}
+      </Pressable>
       </View>
       {loading && <ActivityIndicator color="#e50914" style={{ marginVertical: 10 }} />}
       {!!results.length && (
