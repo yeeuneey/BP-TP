@@ -29,6 +29,7 @@ import {
   posterUrl,
   type TmdbMovie,
 } from './services/tmdb'
+import { signInWithGithub } from './services/githubAuth'
 import type {
   Mode,
   Movie,
@@ -293,6 +294,20 @@ async function fetchWishlist(uid: string) {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error occurred.'
       Alert.alert('Error', message)
+      await curtainRef.current?.openCurtain()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleGithubLogin() {
+    setBusy(true)
+    try {
+      await signInWithGithub()
+      await curtainRef.current?.closeCurtain()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error occurred.'
+      Alert.alert('GitHub 로그인 실패', message)
       await curtainRef.current?.openCurtain()
     } finally {
       setBusy(false)
@@ -576,6 +591,7 @@ const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
           colors={c}
           fontScale={fs}
           onSubmit={handleAuth}
+          onGithubLogin={handleGithubLogin}
         />
       </SafeAreaView>
     )

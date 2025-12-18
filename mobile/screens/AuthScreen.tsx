@@ -19,6 +19,7 @@ interface Props {
   colors: ThemeColors
   fontScale: (size: number) => number
   onSubmit: () => void
+  onGithubLogin: () => void
 }
 
 export interface AuthScreenHandle {
@@ -41,6 +42,7 @@ export const AuthScreen = forwardRef<AuthScreenHandle, Props>(function AuthScree
   colors,
   fontScale,
     onSubmit,
+    onGithubLogin,
   },
   ref,
 ) {
@@ -238,6 +240,20 @@ export const AuthScreen = forwardRef<AuthScreenHandle, Props>(function AuthScree
                   {mode === 'login' ? '로그인하기' : '회원가입하기'}
                 </Text>
               )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.providerButton,
+                { borderColor: colors.border, backgroundColor: colors.card },
+                busy && { opacity: 0.7 },
+              ]}
+              onPress={onGithubLogin}
+              disabled={busy}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.providerText, { color: colors.text, fontSize: fs(15) }]}>
+                GitHub로 로그인
+              </Text>
             </TouchableOpacity>
           </Animated.View>
         </View>

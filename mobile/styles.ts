@@ -162,6 +162,17 @@ export const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
   },
+  providerButton: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    marginTop: 10,
+  },
+  providerText: {
+    fontWeight: '700',
+  },
   homeContainer: {
     flex: 1,
     backgroundColor: '#05070f',
