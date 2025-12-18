@@ -33,8 +33,8 @@ export function PopularScreen({
 
   return (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text, fontSize: fs(18) }]}>지금 가장 인기 있는 영화</Text>
-      {loading ? (
+      <Text style={[styles.sectionTitle, { color: colors.text, fontSize: fs(18) }]}>지금 가장 있기 있는 영화</Text>
+      {initialLoading ? (
         <ActivityIndicator color="#e50914" />
       ) : (
         <PopularList
@@ -52,3 +52,5 @@ export function PopularScreen({
     </View>
   )
 }
+
+

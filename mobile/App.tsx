@@ -55,6 +55,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [currentTab, setCurrentTab] = useState<TabKey>('home')
   const [confirmMovie, setConfirmMovie] = useState<Movie | null>(null)
+  const popularLoadSeq = useRef(0)
   const closePanels = () => {
     setNavOpen(false)
     setSettingsOpen(false)
@@ -90,10 +91,12 @@ export default function App() {
   }
 
   async function loadPopular(page = 1) {
+    const requestId = ++popularLoadSeq.current
     setLoadingPopular(true)
     try {
       const pop = await fetchPopular(page)
       const mapped = mapMovies(pop)
+      if (popularLoadSeq.current !== requestId) return
       if (page === 1) {
         setPopular(mapped)
       } else {
@@ -103,13 +106,15 @@ export default function App() {
       setHasMorePopular(mapped.length > 0)
     } catch (err) {
       console.error(err)
-      Alert.alert('TMDB 오류', '인기 영화를 불러오지 못했어요.')
+      Alert.alert('TMDB error', 'Failed to load popular movies.')
     } finally {
-      setLoadingPopular(false)
+      if (popularLoadSeq.current === requestId) {
+        setLoadingPopular(false)
+      }
     }
   }
 
-  async function loadMovies() {
+async function loadMovies() {
     setLoadingMovies(true)
     try {
       const now = await fetchNowPlaying()
@@ -119,13 +124,13 @@ export default function App() {
       setTopRated(mapMovies(top.slice(0, 10)))
     } catch (err) {
       console.error(err)
-      Alert.alert('TMDB 오류', '영화 정보를 불러오지 못했어요.')
+      Alert.alert('TMDB error', 'Failed to load movies.')
     } finally {
       setLoadingMovies(false)
     }
   }
 
-  async function fetchWishlist(uid: string) {
+async function fetchWishlist(uid: string) {
     try {
       const snap = await getDoc(doc(db, 'wishlists', uid))
       const items = (snap.exists() ? (snap.data().items as WishlistItem[]) : []) ?? []
@@ -137,11 +142,11 @@ export default function App() {
 
   async function handleAuth() {
     if (!email.trim() || !password) {
-      Alert.alert('입력 필요', '이메일과 비밀번호를 입력해주세요.')
+      Alert.alert('Input required', 'Please enter email and password.')
       return
     }
     if (mode === 'signup' && password !== passwordConfirm) {
-      Alert.alert('비밀번호 확인', '비밀번호가 서로 일치하지 않습니다.')
+      Alert.alert('Password check', 'Passwords do not match.')
       return
     }
     setBusy(true)
@@ -163,17 +168,16 @@ export default function App() {
         setPasswordConfirm('')
         await curtainRef.current?.openCurtain()
       }
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : '로그인/회원가입 과정에서 오류가 발생했어요.'
-      Alert.alert('오류', message)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error occurred.'
+      Alert.alert('Error', message)
       await curtainRef.current?.openCurtain()
     } finally {
       setBusy(false)
     }
   }
 
-  async function handleLogout() {
+async function handleLogout() {
     setBusy(true)
     try {
       await signOut(auth)
@@ -185,15 +189,15 @@ export default function App() {
       setSettingsOpen(false)
     } catch (err) {
       console.error('logout failed', err)
-      Alert.alert('오류', '로그아웃에 실패했습니다. 다시 시도해 주세요.')
+      Alert.alert('Logout failed', 'Please try again.')
     } finally {
       setBusy(false)
     }
   }
 
-  async function toggleWishlistItem(movie: Movie) {
+async function toggleWishlistItem(movie: Movie) {
     if (!user) {
-      Alert.alert('로그인 필요', '먼저 로그인해주세요.')
+      Alert.alert('Login required', 'Please log in first.')
       return
     }
     const docRef = doc(db, 'wishlists', user.uid)
@@ -209,7 +213,7 @@ export default function App() {
     setWishlist(next)
   }
 
-  async function handleSearch() {
+async function handleSearch() {
     if (!searchQuery.trim()) {
       setSearchResults([])
       return
@@ -221,13 +225,13 @@ export default function App() {
       setCurrentTab('search')
     } catch (err) {
       console.error(err)
-      Alert.alert('검색 오류', '검색 결과를 불러오지 못했어요.')
+      Alert.alert('Search error', 'Failed to load search results.')
     } finally {
       setLoadingMovies(false)
     }
   }
 
-  const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
+const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
   const fontSteps = [0.9, 0.95, 1, 1.05, 1.1, 1.15, 1.2] as const
   const currentFontScale = fontSteps[Math.min(Math.max(fontLevel, 1), 7) - 1]
   const fs = (size: number) => size * currentFontScale
@@ -237,6 +241,24 @@ export default function App() {
     search: 'SEARCH',
     wishlist: 'WISHLIST',
   }
+
+  useEffect(() => {
+    if (currentTab !== 'popular') {
+      // Reset popular paging/loading state when leaving the tab so it starts fresh next visit.
+      if (popular.length > 0 || loadingPopular) {
+        popularLoadSeq.current += 1
+        setPopular([])
+        setPopularPage(1)
+        setHasMorePopular(true)
+        setLoadingPopular(false)
+      }
+      return
+    }
+
+    if (popular.length === 0 && !loadingPopular) {
+      loadPopular(1)
+    }
+  }, [currentTab])
 
   if (!user) {
     return (
@@ -263,12 +285,14 @@ export default function App() {
   return (
     <SafeAreaView style={[styles.homeContainer, { backgroundColor: c.bg }]}>
       <StatusBar style="light" />
-      <TouchableWithoutFeedback
+      <Pressable
+        style={{ flex: 1 }}
+        disabled={!navOpen && !settingsOpen}
         onPress={() => {
           if (navOpen || settingsOpen) closePanels()
         }}
       >
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1 }} pointerEvents="box-none">
           <View style={[styles.navBar, { backgroundColor: c.bg }]}>
             <Text style={[styles.logo, { color: c.accent }]}>BPTP</Text>
             <View style={[styles.navActions, { gap: 10 }]}>
@@ -353,7 +377,7 @@ export default function App() {
               ]}
             >
               <View style={[styles.navRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-                <Text style={[styles.navLink, { color: c.text }]}>테마</Text>
+                <Text style={[styles.navLink, { color: c.text }]}>Theme</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <TouchableOpacity
                     style={[
@@ -369,7 +393,7 @@ export default function App() {
                     onPress={() => setTheme('light')}
                     activeOpacity={0.85}
                   >
-                    <Text style={{ color: theme === 'light' ? '#fff' : c.text, fontWeight: '700' }}>라이트</Text>
+                    <Text style={{ color: theme === 'light' ? '#fff' : c.text, fontWeight: '700' }}>Light</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
@@ -385,12 +409,12 @@ export default function App() {
                     onPress={() => setTheme('dark')}
                     activeOpacity={0.85}
                   >
-                    <Text style={{ color: theme === 'dark' ? '#fff' : c.text, fontWeight: '700' }}>다크</Text>
+                    <Text style={{ color: theme === 'dark' ? '#fff' : c.text, fontWeight: '700' }}>Dark</Text>
                   </TouchableOpacity>
                 </View>
               </View>
               <View style={[styles.navRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-                <Text style={[styles.navLink, { color: c.text }]}>텍스트 크기</Text>
+                <Text style={[styles.navLink, { color: c.text }]}>Font Size</Text>
                 <View style={{ flexDirection: 'row', gap: 1, alignItems: 'center' }}>
                   <Pressable
                     style={({ pressed }) => [
@@ -432,7 +456,7 @@ export default function App() {
                 </View>
               </View>
               <View style={[styles.navRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-                <Text style={[styles.navLink, { color: c.text }]}>애니메이션</Text>
+                <Text style={[styles.navLink, { color: c.text }]}>Motion</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <TouchableOpacity
                     style={[
@@ -448,7 +472,7 @@ export default function App() {
                     onPress={() => setReduceMotion(true)}
                     activeOpacity={0.85}
                   >
-                    <Text style={{ color: reduceMotion ? '#fff' : c.text, fontWeight: '700' }}>끄기</Text>
+                    <Text style={{ color: reduceMotion ? '#fff' : c.text, fontWeight: '700' }}>Reduce</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
@@ -464,16 +488,12 @@ export default function App() {
                     onPress={() => setReduceMotion(false)}
                     activeOpacity={0.85}
                   >
-                    <Text style={{ color: !reduceMotion ? '#fff' : c.text, fontWeight: '700' }}>켜기</Text>
+                    <Text style={{ color: !reduceMotion ? '#fff' : c.text, fontWeight: '700' }}>Default</Text>
                   </TouchableOpacity>
                 </View>
               </View>
-              <TouchableOpacity
-                style={styles.navRow}
-                onPress={handleLogout}
-                disabled={busy}
-              >
-                <Text style={[styles.navLink, { color: c.text }]}>로그아웃</Text>
+              <TouchableOpacity style={styles.navRow} onPress={handleLogout} disabled={busy}>
+                <Text style={[styles.navLink, { color: c.text }]}>Logout</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -485,7 +505,6 @@ export default function App() {
             nestedScrollEnabled
             overScrollMode="always"
             scrollEventThrottle={16}
-            onStartShouldSetResponderCapture={() => true}
             onScroll={({ nativeEvent }) => {
               if (currentTab === 'popular' && hasMorePopular && !loadingPopular) {
                 const { contentOffset, contentSize, layoutMeasurement } = nativeEvent
@@ -519,13 +538,13 @@ export default function App() {
                 fontScale={fs}
                 loading={loadingPopular}
                 popular={popular}
-            wishlist={wishlist}
-            hasMore={hasMorePopular}
-            page={popularPage}
-            onLoadMore={(nextPage) => !loadingPopular && loadPopular(nextPage)}
-            onToggleWishlist={toggleWishlistItem}
-          />
-        )}
+                wishlist={wishlist}
+                hasMore={hasMorePopular}
+                page={popularPage}
+                onLoadMore={(nextPage) => !loadingPopular && loadPopular(nextPage)}
+                onToggleWishlist={toggleWishlistItem}
+              />
+            )}
 
             {currentTab === 'search' && (
               <SearchScreen
@@ -535,34 +554,40 @@ export default function App() {
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 onSearch={handleSearch}
-            results={searchResults}
-            wishlist={wishlist}
-            onToggleWishlist={toggleWishlistItem}
-          />
-        )}
+                results={searchResults}
+                wishlist={wishlist}
+                onToggleWishlist={toggleWishlistItem}
+              />
+            )}
 
-        {currentTab === 'wishlist' && (
-          <WishlistScreen
-            colors={c}
-            fontScale={fs}
-            wishlist={wishlist}
-            onToggleWishlist={toggleWishlistItem}
-          />
-        )}
-      </ScrollView>
-          <Modal visible={!!confirmMovie} transparent animationType="fade" onRequestClose={() => setConfirmMovie(null)}>
+            {currentTab === 'wishlist' && (
+              <WishlistScreen
+                colors={c}
+                fontScale={fs}
+                wishlist={wishlist}
+                onToggleWishlist={toggleWishlistItem}
+              />
+            )}
+          </ScrollView>
+
+          <Modal
+            visible={!!confirmMovie}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setConfirmMovie(null)}
+          >
             <TouchableWithoutFeedback onPress={() => setConfirmMovie(null)}>
               <View style={styles.modalOverlay}>
                 <TouchableWithoutFeedback>
                   <View style={[styles.modalCard, { backgroundColor: c.card, borderColor: c.border }]}>
-                    <Text style={[styles.modalTitle, { color: c.text }]}>삭제 확인</Text>
-                    <Text style={[styles.modalText, { color: c.muted }]}>위시리스트에서 삭제하시겠습니까?</Text>
+                    <Text style={[styles.modalTitle, { color: c.text }]}>Remove from wishlist</Text>
+                    <Text style={[styles.modalText, { color: c.muted }]}>Remove this movie from your wishlist?</Text>
                     <View style={styles.modalButtons}>
                       <TouchableOpacity
                         style={[styles.modalButton, { backgroundColor: c.card, borderColor: c.border }]}
                         onPress={() => setConfirmMovie(null)}
                       >
-                        <Text style={{ color: c.text, fontWeight: '700' }}>취소</Text>
+                        <Text style={{ color: c.text, fontWeight: '700' }}>Cancel</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[
@@ -579,7 +604,7 @@ export default function App() {
                           setConfirmMovie(null)
                         }}
                       >
-                        <Text style={{ color: '#fff', fontWeight: '700' }}>확인</Text>
+                        <Text style={{ color: '#fff', fontWeight: '700' }}>Delete</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -588,7 +613,7 @@ export default function App() {
             </TouchableWithoutFeedback>
           </Modal>
         </View>
-      </TouchableWithoutFeedback>
+      </Pressable>
     </SafeAreaView>
   )
 }
