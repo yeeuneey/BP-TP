@@ -133,7 +133,19 @@ export default function App() {
   const [navOpen, setNavOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [currentTab, setCurrentTab] = useState<TabKey>('home')
+  const [curtainOpen, setCurtainOpen] = useState(false)
+  const [cardLayout, setCardLayout] = useState({ width: 0, height: 0, y: 0 })
+  const curtainProgress = useRef(new Animated.Value(0)).current
   const notesRef = useMemo(() => collection(db, 'mobile-notes'), [])
+
+  useEffect(() => {
+    Animated.timing(curtainProgress, {
+      toValue: curtainOpen ? 1 : 0,
+      duration: 800,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start()
+  }, [curtainOpen, curtainProgress])
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (next) => {
@@ -324,6 +336,14 @@ export default function App() {
 
   const c = theme === 'dark' ? palette.dark : palette.light
   const fs = (size: number) => size * fontScale
+  const handleStartCurtain = () => {
+    if (!curtainOpen) {
+      setCurtainOpen(true)
+    } else {
+      curtainProgress.stopAnimation()
+      curtainProgress.setValue(1)
+    }
+  }
   const tabLabel = {
     home: 'HOME',
     popular: 'POPULAR',
@@ -345,6 +365,11 @@ export default function App() {
     fontScale,
     onSubmit,
     onGoogleLogin,
+    curtainOpen,
+    setCurtainOpen,
+    curtainProgress,
+    cardLayout,
+    setCardLayout,
   }: {
     mode: Mode
     setMode: (next: Mode) => void
@@ -359,28 +384,13 @@ export default function App() {
     fontScale: (size: number) => number
     onSubmit: () => void
     onGoogleLogin: () => void
+    curtainOpen: boolean
+    setCurtainOpen: (value: boolean) => void
+    curtainProgress: Animated.Value
+    cardLayout: { width: number; height: number; y: number }
+    setCardLayout: (next: { width: number; height: number; y: number }) => void
   }) => {
     const localFs = fontScale
-    const [curtainOpen, setCurtainOpen] = useState(false)
-    const [cardLayout, setCardLayout] = useState({ width: 0, height: 0, y: 0 })
-    const curtainProgress = useRef(new Animated.Value(0)).current
-    const pendingMode = useRef<Mode | null>(null)
-
-    useEffect(() => {
-      Animated.timing(curtainProgress, {
-        toValue: curtainOpen ? 1 : 0,
-        duration: 800,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished && !curtainOpen && pendingMode.current) {
-          setMode(pendingMode.current)
-          pendingMode.current = null
-          setCurtainOpen(true)
-        }
-      })
-    }, [curtainOpen, curtainProgress, setMode])
-
     const slideDistance = cardLayout.width > 0 ? cardLayout.width * 0.55 : 180
     const leftTranslate = curtainProgress.interpolate({
       inputRange: [0, 1],
@@ -393,8 +403,7 @@ export default function App() {
 
     const switchMode = (next: Mode) => {
       if (next === mode) return
-      pendingMode.current = next
-      setCurtainOpen(false)
+      setMode(next)
     }
 
     return (
@@ -545,7 +554,7 @@ export default function App() {
 
         <TouchableOpacity
           style={styles.curtainStartButton}
-          onPress={() => setCurtainOpen((prev) => !prev)}
+          onPress={handleStartCurtain}
           activeOpacity={0.9}
         >
           <Text style={styles.curtainButtonText}>시작하기</Text>
@@ -935,6 +944,11 @@ export default function App() {
           fontScale={fs}
           onSubmit={handleAuth}
           onGoogleLogin={handleGoogleLogin}
+          curtainOpen={curtainOpen}
+          setCurtainOpen={setCurtainOpen}
+          curtainProgress={curtainProgress}
+          cardLayout={cardLayout}
+          setCardLayout={setCardLayout}
         />
       </SafeAreaView>
     )
