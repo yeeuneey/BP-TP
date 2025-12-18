@@ -295,6 +295,62 @@ export const styles = StyleSheet.create({
   sortChipText: {
     fontWeight: '700',
   },
+  filterSection: {
+    marginTop: 18,
+    gap: 12,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  filterGroup: {
+    flex: 1,
+    minWidth: '30%',
+  },
+  filterLabel: {
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  filterSelect: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: '#0b1021',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  filterSelectText: {
+    fontWeight: '700',
+  },
+  filterCaret: {
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  filterDropdown: {
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 8,
+    overflow: 'hidden',
+  },
+  filterOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  filterOptionText: {
+    fontWeight: '600',
+  },
+  filterReset: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  filterResetText: {
+    fontWeight: '800',
+    color: '#fff',
+  },
   secondaryButton: {
     borderRadius: 12,
     borderWidth: 1,

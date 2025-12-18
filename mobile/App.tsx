@@ -28,7 +28,16 @@ import {
   posterUrl,
   type TmdbMovie,
 } from './services/tmdb'
-import type { Mode, Movie, SearchSort, TabKey, WishlistItem } from './types'
+import type {
+  Mode,
+  Movie,
+  SearchGenre,
+  SearchLanguage,
+  SearchSort,
+  SearchYearRange,
+  TabKey,
+  WishlistItem,
+} from './types'
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('login')
@@ -48,6 +57,9 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Movie[]>([])
   const [searchSort, setSearchSort] = useState<SearchSort>('popular')
+  const [searchGenre, setSearchGenre] = useState<SearchGenre>('all')
+  const [searchLanguage, setSearchLanguage] = useState<SearchLanguage>('all')
+  const [searchYear, setSearchYear] = useState<SearchYearRange>('all')
   const [loadingMovies, setLoadingMovies] = useState(false)
   const [loadingPopular, setLoadingPopular] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
@@ -105,7 +117,7 @@ export default function App() {
     }
     const genreNames: Record<number, string> = {
       28: '액션',
-      12: '모험',
+      12: '어드벤처',
       16: '애니메이션',
       35: '코미디',
       80: '범죄',
@@ -133,6 +145,7 @@ export default function App() {
       releaseDate: m.release_date,
       genres: m.genre_ids?.map((id) => genreNames[id]).filter(Boolean),
       country: countryName(m.origin_country?.[0]),
+      language: m.original_language,
     }))
   }
 
@@ -328,6 +341,23 @@ async function toggleWishlistItem(movie: Movie) {
     }
   }
 
+  function filterSearchResults(list: Movie[]) {
+    return list.filter((m) => {
+      if (searchGenre !== 'all' && !(m.genres || []).includes(searchGenre)) return false
+      if (searchLanguage !== 'all' && (m.language ?? '').toLowerCase() !== searchLanguage) return false
+      if (searchYear !== 'all') {
+        const year = m.releaseDate ? Number(m.releaseDate.slice(0, 4)) : NaN
+        if (!Number.isFinite(year)) return false
+        if (searchYear === '2020+' && year < 2020) return false
+        if (searchYear === '2010s' && (year < 2010 || year > 2019)) return false
+        if (searchYear === '2000s' && (year < 2000 || year > 2009)) return false
+        if (searchYear === '1990s' && (year < 1990 || year > 1999)) return false
+        if (searchYear === 'pre1990' && year >= 1990) return false
+      }
+      return true
+    })
+  }
+
   async function handleSearch() {
     if (!searchQuery.trim()) {
       setSearchResults([])
@@ -347,9 +377,22 @@ async function toggleWishlistItem(movie: Movie) {
     }
   }
 
+  function resetSearchFilters() {
+    setSearchSort('popular')
+    setSearchGenre('all')
+    setSearchLanguage('all')
+    setSearchYear('all')
+    setSearchResults([])
+  }
+
+  const filteredSearchResults = useMemo(
+    () => filterSearchResults(searchResults),
+    [searchResults, searchGenre, searchLanguage, searchYear],
+  )
+
   const sortedSearchResults = useMemo(
-    () => sortSearchResults(searchResults, searchSort),
-    [searchResults, searchSort],
+    () => sortSearchResults(filteredSearchResults, searchSort),
+    [filteredSearchResults, searchSort],
   )
 
 const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
@@ -698,6 +741,13 @@ const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
                 onSearch={handleSearch}
                 searchSort={searchSort}
                 setSearchSort={setSearchSort}
+                searchGenre={searchGenre}
+                setSearchGenre={setSearchGenre}
+                searchLanguage={searchLanguage}
+                setSearchLanguage={setSearchLanguage}
+                searchYear={searchYear}
+                setSearchYear={setSearchYear}
+                onResetFilters={resetSearchFilters}
                 results={sortedSearchResults}
                 wishlist={wishlist}
                 onToggleWishlist={toggleWishlistItem}

@@ -9,6 +9,7 @@ export interface TmdbMovie {
   release_date?: string
   genre_ids?: number[]
   origin_country?: string[]
+  original_language?: string
 }
 
 interface TmdbGenre {
