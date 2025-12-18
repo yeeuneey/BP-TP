@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import { FlatList, Image, Pressable, Text, TouchableOpacity, View } from 'react-native'
-
 import type { ThemeColors } from '../theme'
 import { styles } from '../styles'
 import { Movie, WishlistItem } from '../types'
@@ -31,6 +30,7 @@ export function MovieSection({ title, data, colors, fontScale, wishlist, onToggl
           horizontal
           showsHorizontalScrollIndicator={false}
           nestedScrollEnabled
+          directionalLockEnabled
           onScroll={(e) => setScrollX(e.nativeEvent.contentOffset.x)}
           scrollEventThrottle={16}
           renderItem={({ item }) => {

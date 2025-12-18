@@ -481,7 +481,11 @@ export default function App() {
           <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: 32 }}
+            contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}
+            nestedScrollEnabled
+            overScrollMode="always"
+            scrollEventThrottle={16}
+            onStartShouldSetResponderCapture={() => true}
           >
             {currentTab === 'home' && (
               <HomeScreen
