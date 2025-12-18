@@ -6,7 +6,6 @@ import HomeView from '@/views/HomeView.vue'
 import PopularView from '@/views/PopularView.vue'
 import SearchView from '@/views/SearchView.vue'
 import WishlistView from '@/views/WishlistView.vue'
-import RecommendedView from '@/views/RecommendedView.vue'
 import MovieDetailView from '@/views/MovieDetailView.vue'
 
 const routes: RouteRecordRaw[] = [
@@ -38,12 +37,6 @@ const routes: RouteRecordRaw[] = [
     path: '/wishlist',
     name: 'wishlist',
     component: WishlistView,
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/recommended',
-    name: 'recommended',
-    component: RecommendedView,
     meta: { requiresAuth: true },
   },
   {

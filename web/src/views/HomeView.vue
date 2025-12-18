@@ -5,7 +5,7 @@
       <div class="hero__content">
         <p class="hero__eyebrow">Just for you</p>
         <p class="hero__copy">
-          TMDB API와 연동된 실시간 인기, 상영 중, 장르 추천까지 한 곳에서 만나볼 수 있습니다.
+          TMDB API와 연동된 실시간 인기, 상영 중 영화를 한 곳에서 만나볼 수 있습니다.
         </p>
         <div class="hero__actions">
           <RouterLink to="/popular" class="hero__cta hero__cta--primary">인기작 보기</RouterLink>
@@ -51,9 +51,8 @@
           :key="movie.id"
           :movie="movie"
           :is-wishlisted="isInWishlist(movie.id)"
-          :is-recommended="isRecommended(movie.id)"
+          :is-recommended="false"
           @toggle-wishlist="toggleWishlist"
-          @toggle-recommend="toggleRecommendation"
         />
       </div>
     </section>
@@ -72,7 +71,6 @@ import {
   type TmdbMovie,
 } from '@/services/tmdb'
 import { useWishlist } from '@/composables/useWishlist'
-import { useRecommendations } from '@/composables/useRecommendations'
 
 interface HomeSectionState {
   key: string
@@ -83,7 +81,6 @@ interface HomeSectionState {
 }
 
 const { toggleWishlist, isInWishlist } = useWishlist()
-const { toggleRecommendation, isRecommended } = useRecommendations()
 
 const sections = reactive<HomeSectionState[]>([
   {

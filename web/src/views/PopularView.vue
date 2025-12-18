@@ -37,9 +37,8 @@
             :key="movie.id"
             :movie="movie"
             :is-wishlisted="isInWishlist(movie.id)"
-            :is-recommended="isRecommended(movie.id)"
+            :is-recommended="false"
             @toggle-wishlist="toggleWishlist"
-            @toggle-recommend="toggleRecommendation"
           />
         </div>
 
@@ -102,12 +101,7 @@
             </div>
             <p class="feed-meta">
               <span>{{ movie.release_date ?? '개봉일 정보 없음' }}</span>
-              <span
-                class="recommend-state"
-                :class="{ 'recommend-state--on': isRecommended(movie.id) }"
-              >
-                {{ isRecommended(movie.id) ? '추천됨' : '추천대기' }}
-              </span>
+              <span class="recommend-state recommend-state--off">추천 없음</span>
             </p>
             <p v-if="movie.overview" class="feed-overview">
               {{ getOverviewSnippet(movie.overview) }}
@@ -116,13 +110,6 @@
               <button
                 type="button"
                 class="feed-action-btn"
-                @click.stop="toggleRecommendation(movie)"
-              >
-                {{ isRecommended(movie.id) ? '추천 취소' : '추천하기' }}
-              </button>
-              <button
-                type="button"
-                class="feed-action-btn feed-action-btn--ghost"
                 @click.stop="toggleWishlist(movie)"
               >
                 {{ isInWishlist(movie.id) ? '위시리스트 해제' : '담기' }}
@@ -165,13 +152,11 @@ import LoaderSpinner from '@/components/common/LoaderSpinner.vue'
 import MovieCard from '@/components/movie/MovieCard.vue'
 import { fetchPopularMovies, type TmdbMovie } from '@/services/tmdb'
 import { useWishlist } from '@/composables/useWishlist'
-import { useRecommendations } from '@/composables/useRecommendations'
 
 type ViewMode = 'table' | 'infinite'
 
 const viewMode = ref<ViewMode>('table')
 const { toggleWishlist, isInWishlist } = useWishlist()
-const { toggleRecommendation, isRecommended } = useRecommendations()
 
 interface TableState {
   page: number

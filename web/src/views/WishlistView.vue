@@ -31,19 +31,14 @@
             <div>
               <h3>{{ movie.title }}</h3>
               <p class="wishlist-card__meta">TMDB #{{ movie.id }}</p>
-              <p
-                v-if="isRecommended(movie.id)"
-                class="wishlist-card__meta wishlist-card__meta--highlight"
-              >
-                추천 목록에 포함됨
-              </p>
+              <p class="wishlist-card__meta wishlist-card__meta--highlight">담은 영화</p>
             </div>
             <div class="wishlist-card__actions">
               <button type="button" class="remove-btn" @click="handleRemove(movie.id)">
                 삭제
               </button>
-              <button type="button" class="recommend-btn" @click="handleRecommend(movie.id)">
-                {{ isRecommended(movie.id) ? '추천 취소' : '추천 추가' }}
+              <button type="button" class="recommend-btn" disabled>
+                추천 기능 없음
               </button>
             </div>
           </div>
@@ -59,11 +54,8 @@
 
 <script setup lang="ts">
 import { useWishlist, type WishlistMovie } from '@/composables/useWishlist'
-import { useRecommendations } from '@/composables/useRecommendations'
-import type { TmdbMovie } from '@/services/tmdb'
 
 const { wishlist, toggleWishlist } = useWishlist()
-const { toggleRecommendation, isRecommended } = useRecommendations()
 
 function getPosterSrc(movie: WishlistMovie) {
   if (movie.poster_path) return `https://image.tmdb.org/t/p/w300${movie.poster_path}`
@@ -75,7 +67,7 @@ function buildPayload(movieId: number) {
   const movie = wishlist.value.find((item) => item.id === movieId)
   if (!movie) return null
 
-  const payload: TmdbMovie = {
+  const payload = {
     id: movie.id,
     title: movie.title,
     poster_path: movie.poster_path,
@@ -88,12 +80,6 @@ function handleRemove(movieId: number) {
   const payload = buildPayload(movieId)
   if (!payload) return
   toggleWishlist(payload)
-}
-
-function handleRecommend(movieId: number) {
-  const payload = buildPayload(movieId)
-  if (!payload) return
-  toggleRecommendation(payload)
 }
 </script>
 

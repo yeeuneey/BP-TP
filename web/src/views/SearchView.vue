@@ -152,9 +152,7 @@
           :key="movie.id"
           :movie="movie"
           :is-wishlisted="isInWishlist(movie.id)"
-          :is-recommended="isRecommended(movie.id)"
           @toggle-wishlist="toggleWishlist"
-          @toggle-recommend="toggleRecommendation"
         />
       </div>
     </section>
@@ -172,7 +170,6 @@ import {
   type TmdbMovie,
 } from '@/services/tmdb'
 import { useWishlist } from '@/composables/useWishlist'
-import { useRecommendations } from '@/composables/useRecommendations'
 import { useSearchHistory } from '@/composables/useSearchHistory'
 
 const searchQuery = ref('')
@@ -189,7 +186,6 @@ const sortOption = ref<'popularityDesc' | 'ratingDesc' | 'ratingAsc' | 'dateDesc
 )
 
 const { toggleWishlist, isInWishlist } = useWishlist()
-const { toggleRecommendation, isRecommended } = useRecommendations()
 const { history, addSearch, clearHistory } = useSearchHistory()
 
 async function handleSearch() {

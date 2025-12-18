@@ -16,7 +16,7 @@
           type="button"
           class="mode-chip mode-chip--login"
           :class="{ active: mode === 'login' }"
-          @click="mode = 'login'"
+          @click="changeMode('login')"
         >
           LOGIN
         </button>
@@ -29,13 +29,18 @@
           type="button"
           class="mode-chip mode-chip--signup"
           :class="{ active: mode === 'register' }"
-          @click="mode = 'register'"
+          @click="changeMode('register')"
         >
           SIGN UP
         </button>
       </div>
 
       <div class="auth-rotator">
+        <div class="curtain" :class="{ 'curtain--open': curtainOpen }" aria-hidden="true">
+          <span class="curtain__panel curtain__panel--left"></span>
+          <span class="curtain__panel curtain__panel--right"></span>
+          <span class="curtain__glow"></span>
+        </div>
         <div
           class="auth-peek auth-peek--register"
           :class="{ 'auth-peek--visible': mode === 'login' }"
@@ -96,7 +101,7 @@
               :disabled="isSubmitting"
               @click="handleGoogleLogin"
             >
-              Google로 로그인
+              Google 로그인
             </button>
 
             <p v-if="message && mode === 'login'" class="auth-message auth-message--inline">
@@ -169,6 +174,12 @@
         </div>
       </div>
     </div>
+
+    <div class="curtain-toggle-row">
+      <button type="button" class="curtain-toggle" @click="openCurtain">
+        시작하기
+      </button>
+    </div>
   </div>
 </template>
 
@@ -186,6 +197,8 @@ import {
 const router = useRouter()
 
 const mode = ref<'login' | 'register'>('login')
+const curtainOpen = ref(false)
+let curtainTimer: number | null = null
 
 type StarVariant = 'near' | 'mid' | 'far'
 
@@ -305,6 +318,23 @@ async function handleGoogleLogin() {
   )
   isSubmitting.value = false
 }
+
+function openCurtain() {
+  curtainOpen.value = true
+}
+
+function changeMode(next: 'login' | 'register') {
+  if (mode.value === next) return
+  if (curtainTimer) {
+    window.clearTimeout(curtainTimer)
+    curtainTimer = null
+  }
+  curtainOpen.value = false
+  curtainTimer = window.setTimeout(() => {
+    mode.value = next
+    curtainOpen.value = true
+  }, 1000)
+}
 </script>
 
 <style scoped>
@@ -395,6 +425,7 @@ async function handleGoogleLogin() {
     0 20px 40px rgba(0, 0, 0, 0.55),
     inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
+  position: relative;
 }
 
 .auth-title {
@@ -437,11 +468,173 @@ async function handleGoogleLogin() {
   transform: translateY(-1px);
 }
 
+.curtain-toggle-row {
+  display: flex;
+  justify-content: center;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 1.75rem;
+  width: 100%;
+  pointer-events: none;
+}
+
+.curtain-toggle {
+  border: 1px solid rgba(229, 9, 20, 0.7);
+  background: linear-gradient(135deg, #b4050c, #e50914, #8a040a);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.55rem 1.4rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  box-shadow:
+    0 14px 28px rgba(229, 9, 20, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease,
+    filter 0.2s ease;
+  pointer-events: auto;
+}
+
+.curtain-toggle:hover {
+  background: linear-gradient(135deg, #c4060d, #e50914, #9b040c);
+  box-shadow:
+    0 18px 34px rgba(229, 9, 20, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
 .auth-rotator {
   position: relative;
   width: clamp(260px, 64vw, 420px);
   height: clamp(320px, 50vh, 400px);
   perspective: inherit;
+}
+
+.curtain {
+  position: absolute;
+  inset: -28% -18%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.curtain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.16);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.curtain__panel {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.12), transparent 40%),
+    linear-gradient(60deg, rgba(255, 255, 255, 0.07), transparent 55%),
+    repeating-linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0.16) 0%,
+      rgba(0, 0, 0, 0.06) 4%,
+      rgba(0, 0, 0, 0.16) 8%
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.18) 0%,
+      rgba(0, 0, 0, 0.08) 18%,
+      rgba(0, 0, 0, 0.18) 36%
+    ),
+    linear-gradient(135deg, rgba(229, 9, 20, 1), rgba(124, 6, 12, 1));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+  box-shadow:
+    inset 0 0 50px rgba(0, 0, 0, 0.35),
+    0 18px 45px rgba(0, 0, 0, 0.6);
+  opacity: 1;
+}
+
+.curtain__panel::before {
+  content: '';
+  position: absolute;
+  inset: -14% 12%;
+  background: radial-gradient(circle at 40% 20%, rgba(255, 255, 255, 0.22), transparent 45%);
+  opacity: 0.35;
+  mix-blend-mode: screen;
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+.curtain__panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.24) 0%,
+    rgba(0, 0, 0, 0.08) 6%,
+    rgba(0, 0, 0, 0.24) 12%
+  );
+  opacity: 0.25;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.curtain__panel--left {
+  border-right: none;
+}
+
+.curtain__panel--right {
+  border-left: none;
+}
+
+.curtain__glow {
+  position: absolute;
+  inset: 8% 4%;
+  background: radial-gradient(circle, rgba(229, 9, 20, 0.5), transparent 70%);
+  filter: blur(32px);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.curtain--open .curtain__panel--left {
+  transform: translateX(-105%);
+}
+
+.curtain--open .curtain__panel--right {
+  transform: translateX(105%);
+}
+
+.curtain--open .curtain__glow {
+  opacity: 0;
+}
+
+.curtain-launch {
+  margin-top: 0.45rem;
+  width: 100%;
+  border: 1px solid rgba(229, 9, 20, 0.6);
+  background: linear-gradient(135deg, #c4060d, #e50914);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.75rem 1rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  box-shadow:
+    0 18px 32px rgba(229, 9, 20, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.curtain-launch:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow:
+    0 22px 36px rgba(229, 9, 20, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .auth-peek {

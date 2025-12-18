@@ -365,9 +365,10 @@ export const styles = StyleSheet.create({
   curtainPanel: {
     flex: 1,
     height: '100%',
-    backgroundColor: '#e50914',
+    backgroundColor: '#b00010',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   curtainLeft: {
     borderRightWidth: 1,
@@ -377,15 +378,24 @@ export const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderColor: '#b91c1c',
   },
+  curtainSheen: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
   curtainStripes: {
+    position: 'absolute',
+    inset: 0,
     flexDirection: 'row',
-    gap: 6,
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    opacity: 0.35,
   },
   curtainStripe: {
-    width: 6,
-    height: 160,
-    backgroundColor: '#c53030',
-    borderRadius: 4,
+    width: 12,
+    height: '120%',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 6,
   },
   curtainStartButton: {
     alignSelf: 'center',

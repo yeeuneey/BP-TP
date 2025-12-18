@@ -669,7 +669,8 @@ export default function App() {
               >
                 <Text style={{ color: '#fff', fontWeight: '800', fontSize: 18 }}>
                   {picked ? '❤' : '❤'}
-                </Text>
+                  {picked ? '❤' : '❤'}
+                  </Text>
               </TouchableOpacity>
               <Image
                 source={
@@ -1083,3 +1084,6 @@ export default function App() {
     </SafeAreaView>
   )
 }
+
+
+

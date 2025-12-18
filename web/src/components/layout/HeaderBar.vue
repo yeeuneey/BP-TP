@@ -137,7 +137,6 @@ const navItems = [
   { to: '/popular', label: 'Popular', icon: ['fas', 'fire'] as const },
   { to: '/search', label: 'Search', icon: ['fas', 'magnifying-glass'] as const },
   { to: '/wishlist', label: 'Wishlist', icon: ['fas', 'heart'] as const },
-  { to: '/recommended', label: 'Recommended', icon: ['fas', 'thumbs-up'] as const },
 ]
 
 const isAuthenticated = computed(() => userId.value !== null)
