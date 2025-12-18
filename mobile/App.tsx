@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Alert, Modal, ScrollView, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
@@ -12,7 +12,7 @@ import {
 import { collection, doc, getDoc, setDoc } from 'firebase/firestore'
 
 import { auth, db } from './firebaseConfig'
-import { AuthScreen } from './screens/AuthScreen'
+import { AuthScreen, type AuthScreenHandle } from './screens/AuthScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { PopularScreen } from './screens/PopularScreen'
 import { SearchScreen } from './screens/SearchScreen'
@@ -35,6 +35,7 @@ export default function App() {
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [user, setUser] = useState<User | null>(null)
   const [busy, setBusy] = useState(false)
+  const curtainRef = useRef<AuthScreenHandle>(null)
 
   const [popular, setPopular] = useState<Movie[]>([])
   const [popularPage, setPopularPage] = useState(1)
@@ -142,15 +143,27 @@ export default function App() {
     setBusy(true)
     try {
       if (mode === 'login') {
+        await curtainRef.current?.closeCurtain()
         await signInWithEmailAndPassword(auth, email.trim(), password)
+        await curtainRef.current?.closeCurtain()
       } else {
+        await curtainRef.current?.closeCurtain()
         await createUserWithEmailAndPassword(auth, email.trim(), password)
-        Alert.alert('회원가입 완료', '로그인되었습니다.')
+        try {
+          await signOut(auth)
+        } catch (err) {
+          console.error('post-signup signout failed', err)
+        }
+        setMode('login')
+        setPassword('')
+        setPasswordConfirm('')
+        await curtainRef.current?.openCurtain()
       }
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : '로그인/회원가입 과정에서 오류가 발생했어요.'
       Alert.alert('오류', message)
+      await curtainRef.current?.openCurtain()
     } finally {
       setBusy(false)
     }
@@ -160,6 +173,15 @@ export default function App() {
     setBusy(true)
     try {
       await signOut(auth)
+      setUser(null)
+      setWishlist([])
+      setMode('login')
+      setCurrentTab('home')
+      setNavOpen(false)
+      setSettingsOpen(false)
+    } catch (err) {
+      console.error('logout failed', err)
+      Alert.alert('오류', '로그아웃에 실패했습니다. 다시 시도해 주세요.')
     } finally {
       setBusy(false)
     }
@@ -216,6 +238,7 @@ export default function App() {
     return (
       <SafeAreaView style={[styles.authContainer, { backgroundColor: c.bg }]}>
         <AuthScreen
+          ref={curtainRef}
           mode={mode}
           setMode={setMode}
           email={email}
@@ -288,14 +311,14 @@ export default function App() {
           {settingsOpen && (
             <View style={[styles.navDropdown, { backgroundColor: c.card, borderColor: c.border }]}>
               <TouchableOpacity
-                style={styles.navRow}
+                style={[styles.navRow, { marginBottom: 8 }]}
                 onPress={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               >
                 <Text style={[styles.navLink, { color: c.text }]}>
                   테마: {theme === 'dark' ? '다크' : '라이트'}
                 </Text>
               </TouchableOpacity>
-              <View style={[styles.navRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+              <View style={[styles.navRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }]}>
                 <Text style={[styles.navLink, { color: c.text }]}>글자 크기</Text>
                 <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
                   <TouchableOpacity
@@ -318,14 +341,18 @@ export default function App() {
                 </View>
               </View>
               <TouchableOpacity
-                style={styles.navRow}
+                style={[styles.navRow, { marginBottom: 8 }]}
                 onPress={() => setReduceMotion((v) => !v)}
               >
                 <Text style={[styles.navLink, { color: c.text }]}>
                   애니메이션 {reduceMotion ? '끄기' : '켜기'}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.navRow} onPress={handleLogout} disabled={busy}>
+              <TouchableOpacity
+                style={[styles.navRow, { marginBottom: 8 }]}
+                onPress={handleLogout}
+                disabled={busy}
+              >
                 <Text style={[styles.navLink, { color: c.text }]}>로그아웃</Text>
               </TouchableOpacity>
             </View>
