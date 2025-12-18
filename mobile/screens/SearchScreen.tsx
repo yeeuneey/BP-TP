@@ -13,8 +13,8 @@ interface Props {
   searchQuery: string
   setSearchQuery: (value: string) => void
   onSearch: () => void
-  searchSort: SearchSort
-  setSearchSort: (value: SearchSort) => void
+  searchSort: SearchSort | null
+  setSearchSort: (value: SearchSort | null) => void
   searchGenre: SearchGenre
   setSearchGenre: (value: SearchGenre) => void
   searchLanguage: SearchLanguage
@@ -125,6 +125,7 @@ export function SearchScreen({
                   onPress={() => {
                     onChange(option.value)
                     setOpenFilter(null)
+                    onSearch()
                   }}
                 >
                   {({ pressed }) => (
@@ -179,11 +180,6 @@ export function SearchScreen({
           )}
         </Pressable>
       </View>
-      <View style={styles.searchHint}>
-        <Text style={[styles.searchHintText, { color: colors.accent }]}>
-          검색어를 입력하면 TMDB에서 결과를 불러옵니다.
-        </Text>
-      </View>
       <View style={styles.sortSection}>
         <Text style={[styles.sortLabel, { color: colors.text }]}>정렬</Text>
         <View style={styles.sortRow}>
@@ -199,7 +195,10 @@ export function SearchScreen({
                     backgroundColor: active || pressed ? colors.accent : colors.card,
                   },
                 ]}
-                onPress={() => setSearchSort(option.key)}
+                onPress={() => {
+                  setSearchSort(option.key)
+                  onSearch()
+                }}
               >
                 {({ pressed }) => (
                   <Text

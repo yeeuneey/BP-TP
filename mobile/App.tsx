@@ -23,6 +23,7 @@ import {
   fetchNowPlaying,
   fetchPopular,
   fetchTopRated,
+  discoverMovies,
   searchMovies,
   fetchMovieDetails,
   posterUrl,
@@ -56,7 +57,7 @@ export default function App() {
   const [wishlist, setWishlist] = useState<WishlistItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<Movie[]>([])
-  const [searchSort, setSearchSort] = useState<SearchSort>('popular')
+  const [searchSort, setSearchSort] = useState<SearchSort | null>(null)
   const [searchGenre, setSearchGenre] = useState<SearchGenre>('all')
   const [searchLanguage, setSearchLanguage] = useState<SearchLanguage>('all')
   const [searchYear, setSearchYear] = useState<SearchYearRange>('all')
@@ -183,6 +184,7 @@ export default function App() {
             runtime: detail.runtime ?? m.runtime,
             country: countryName(detail.production_countries?.[0]?.iso_3166_1) ?? m.country,
             genres: detail.genres?.map((g) => g.name) ?? m.genres,
+            language: detail.original_language ?? m.language,
           }
         } catch (err) {
           console.error('detail fetch failed', err)
@@ -322,7 +324,7 @@ async function toggleWishlistItem(movie: Movie) {
     setWishlist(next)
   }
 
-  function sortSearchResults(list: Movie[], sort: SearchSort) {
+  function sortSearchResults(list: Movie[], sort: SearchSort | null) {
     const parsedDate = (value?: string) => {
       const ts = value ? Date.parse(value) : 0
       return Number.isFinite(ts) ? ts : 0
@@ -338,13 +340,16 @@ async function toggleWishlistItem(movie: Movie) {
       case 'popular':
       default:
         return items
-    }
+  }
   }
 
   function filterSearchResults(list: Movie[]) {
     return list.filter((m) => {
       if (searchGenre !== 'all' && !(m.genres || []).includes(searchGenre)) return false
-      if (searchLanguage !== 'all' && (m.language ?? '').toLowerCase() !== searchLanguage) return false
+      if (searchLanguage !== 'all') {
+        const lang = (m.language ?? '').toLowerCase()
+        if (!lang || lang !== searchLanguage) return false
+      }
       if (searchYear !== 'all') {
         const year = m.releaseDate ? Number(m.releaseDate.slice(0, 4)) : NaN
         if (!Number.isFinite(year)) return false
@@ -359,15 +364,61 @@ async function toggleWishlistItem(movie: Movie) {
   }
 
   async function handleSearch() {
-    if (!searchQuery.trim()) {
-      setSearchResults([])
-      return
-    }
     try {
       setLoadingMovies(true)
-      const results = await searchMovies(searchQuery.trim())
-      setSearchResults(mapMovies(results.slice(0, 12)))
-      setSearchSort('popular')
+      const trimmed = searchQuery.trim()
+      if (trimmed) {
+        const page1 = await searchMovies(trimmed, 1)
+        const page2 = await searchMovies(trimmed, 2)
+        const combined = [...page1, ...page2]
+        setSearchResults(mergeUniqueMovies([], mapMovies(combined)))
+      } else {
+        const genreIdMap: Partial<Record<SearchGenre, number>> = {
+          액션: 28,
+          어드벤처: 12,
+          애니메이션: 16,
+          코미디: 35,
+          범죄: 80,
+          드라마: 18,
+          판타지: 14,
+          공포: 27,
+          로맨스: 10749,
+          SF: 878,
+          스릴러: 53,
+        }
+        const sortMap: Record<SearchSort, string> = {
+          popular: 'popularity.desc',
+          latest: 'primary_release_date.desc',
+          rating: 'vote_average.desc',
+          title: 'original_title.asc',
+        }
+        const sortKey = searchSort ?? 'popular'
+        const [gte, lte] =
+          searchYear === '2020+'
+            ? ['2020-01-01', undefined]
+            : searchYear === '2010s'
+              ? ['2010-01-01', '2019-12-31']
+              : searchYear === '2000s'
+                ? ['2000-01-01', '2009-12-31']
+                : searchYear === '1990s'
+                  ? ['1990-01-01', '1999-12-31']
+                  : searchYear === 'pre1990'
+                    ? [undefined, '1989-12-31']
+                    : [undefined, undefined]
+
+        const baseParams = {
+          sortBy: sortMap[sortKey],
+          withOriginalLanguage: searchLanguage !== 'all' ? searchLanguage : undefined,
+          withGenres: searchGenre !== 'all' ? String(genreIdMap[searchGenre] ?? '') : undefined,
+          primaryReleaseDateGte: gte,
+          primaryReleaseDateLte: lte,
+        }
+        const [page1, page2] = await Promise.all([
+          discoverMovies({ ...baseParams, page: 1 }),
+          discoverMovies({ ...baseParams, page: 2 }),
+        ])
+        setSearchResults(mergeUniqueMovies([], mapMovies([...page1, ...page2])))
+      }
       setCurrentTab('search')
     } catch (err) {
       console.error(err)
@@ -378,10 +429,11 @@ async function toggleWishlistItem(movie: Movie) {
   }
 
   function resetSearchFilters() {
-    setSearchSort('popular')
+    setSearchSort(null)
     setSearchGenre('all')
     setSearchLanguage('all')
     setSearchYear('all')
+    setSearchQuery('')
     setSearchResults([])
   }
 
@@ -391,7 +443,7 @@ async function toggleWishlistItem(movie: Movie) {
   )
 
   const sortedSearchResults = useMemo(
-    () => sortSearchResults(filteredSearchResults, searchSort),
+    () => sortSearchResults(filteredSearchResults, searchSort ?? 'popular'),
     [filteredSearchResults, searchSort],
   )
 
