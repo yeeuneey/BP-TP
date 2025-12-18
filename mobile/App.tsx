@@ -72,6 +72,7 @@ export default function App() {
   const [navOpen, setNavOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [currentTab, setCurrentTab] = useState<TabKey>('home')
+  const prevTab = useRef<TabKey>('home')
   const [confirmMovie, setConfirmMovie] = useState<Movie | null>(null)
   const [showPopularTop, setShowPopularTop] = useState(false)
   const scrollRef = useRef<ScrollView>(null)
@@ -95,6 +96,13 @@ export default function App() {
     })
     return unsub
   }, [])
+
+  useEffect(() => {
+    if (prevTab.current === 'search' && currentTab !== 'search') {
+      resetSearchFilters()
+    }
+    prevTab.current = currentTab
+  }, [currentTab])
 
   function mapMovies(items: TmdbMovie[]): Movie[] {
     const countryName = (code?: string) => {
@@ -428,8 +436,9 @@ async function toggleWishlistItem(movie: Movie) {
     }
   }
 
-  async function handleSearch() {
+  async function handleSearch(nextSort?: SearchSort) {
     try {
+      if (nextSort) setSearchSort(nextSort)
       setLoadingMovies(true)
       setSearchPage(1)
       setHasMoreSearch(true)
@@ -460,7 +469,7 @@ async function toggleWishlistItem(movie: Movie) {
           rating: 'vote_average.desc',
           title: 'original_title.asc',
         }
-        const sortKey = searchSort ?? 'popular'
+        const sortKey = nextSort ?? searchSort ?? 'popular'
         const [gte, lte] =
           searchYear === '2020+'
             ? ['2020-01-01', undefined]

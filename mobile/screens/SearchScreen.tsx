@@ -22,7 +22,7 @@ interface Props {
   loading: boolean
   searchQuery: string
   setSearchQuery: (value: string) => void
-  onSearch: () => void
+  onSearch: (sortOverride?: SearchSort) => void
   searchSort: SearchSort | null
   setSearchSort: (value: SearchSort | null) => void
   searchGenre: SearchGenre
@@ -193,7 +193,7 @@ export function SearchScreen({
               backgroundColor: pressed ? colors.accent : colors.card,
             },
           ]}
-          onPress={onSearch}
+          onPress={() => onSearch()}
         >
           {({ pressed }) => (
             <Text style={[styles.secondaryText, { color: pressed ? '#fff' : colors.text }]}>검색</Text>
@@ -217,7 +217,7 @@ export function SearchScreen({
                 ]}
                 onPress={() => {
                   setSearchSort(option.key)
-                  onSearch()
+                  onSearch(option.key)
                 }}
               >
                 {({ pressed }) => (
