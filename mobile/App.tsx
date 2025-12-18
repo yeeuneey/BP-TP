@@ -57,6 +57,8 @@ export default function App() {
   const [confirmMovie, setConfirmMovie] = useState<Movie | null>(null)
   const [showPopularTop, setShowPopularTop] = useState(false)
   const scrollRef = useRef<ScrollView>(null)
+  const [menuButtonLayout, setMenuButtonLayout] = useState({ x: 0, y: 0, width: 0, height: 0 })
+  const [settingsButtonLayout, setSettingsButtonLayout] = useState({ x: 0, y: 0, width: 0, height: 0 })
   const popularLoadSeq = useRef(0)
   const closePanels = () => {
     setNavOpen(false)
@@ -243,10 +245,13 @@ const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
     search: 'SEARCH',
     wishlist: 'WISHLIST',
   }
+  const menuDropdownWidth = 150
+  const menuDropdownLeft = Math.max(12, menuButtonLayout.x + menuButtonLayout.width / 2 - menuDropdownWidth / 2)
+  const menuDropdownTop = menuButtonLayout.y + menuButtonLayout.height + 12
+  const settingsDropdownTop = settingsButtonLayout.y + settingsButtonLayout.height + 20
 
   useEffect(() => {
     if (currentTab !== 'popular') {
-      // Reset popular paging/loading state when leaving the tab so it starts fresh next visit.
       if (popular.length > 0 || loadingPopular) {
         popularLoadSeq.current += 1
         setPopular([])
@@ -296,19 +301,28 @@ const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
         }}
       >
         <View style={{ flex: 1 }} pointerEvents="box-none">
-          <View style={[styles.navBar, { backgroundColor: c.bg }]}>
-            <Text style={[styles.logo, { color: c.accent }]}>BPTP</Text>
-            <View style={[styles.navActions, { gap: 10 }]}>
-              <TouchableOpacity
-                style={[styles.menuButton, { borderColor: c.border }]}
-                onPress={() => {
-                  setNavOpen((v) => !v)
-                  setSettingsOpen(false)
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={{ color: c.text, fontWeight: '700' }}>MENU</Text>
-              </TouchableOpacity>
+          <View style={[styles.navBar, { backgroundColor: c.bg, position: 'relative' }]}>
+            <TouchableOpacity
+              style={[styles.menuButton, { borderColor: c.border, position: 'absolute', left: 20 }]}
+              onPress={() => {
+                setNavOpen((v) => !v)
+                setSettingsOpen(false)
+              }}
+              activeOpacity={0.8}
+              onLayout={({ nativeEvent }) => setMenuButtonLayout(nativeEvent.layout)}
+            >
+              <Text style={{ color: c.text, fontWeight: '700' }}>메뉴</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                setCurrentTab('home')
+                closePanels()
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.logo, { color: c.accent }]}>BPTP</Text>
+            </TouchableOpacity>
+            <View style={[styles.navActions, { gap: 10, position: 'absolute', right: 20 }]}>
               <TouchableOpacity
                 style={[styles.menuButton, { borderColor: c.border }]}
                 onPress={() => {
@@ -316,8 +330,9 @@ const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
                   setNavOpen(false)
                 }}
                 activeOpacity={0.8}
+                onLayout={({ nativeEvent }) => setSettingsButtonLayout(nativeEvent.layout)}
               >
-                <Text style={{ color: c.text, fontWeight: '700' }}>SETTINGS</Text>
+                <Text style={{ color: c.text, fontWeight: '700' }}>설정</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -329,9 +344,9 @@ const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
                 {
                   backgroundColor: theme === 'dark' ? '#1e2740' : 'rgba(255,255,255,0.96)',
                   borderColor: theme === 'dark' ? '#394766' : '#d1d5db',
-                  right: 98.5,
-                  left: undefined,
-                  width: '30%',
+                  left: menuDropdownLeft,
+                  top: menuDropdownTop,
+                  width: menuDropdownWidth,
                 },
               ]}
             >
@@ -376,11 +391,12 @@ const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
                   right: 16,
                   left: undefined,
                   width: '44%',
+                  top: settingsDropdownTop,
                 },
               ]}
             >
               <View style={[styles.navRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-                <Text style={[styles.navLink, { color: c.text }]}>Theme</Text>
+                <Text style={[styles.navLink, { color: c.text }]}>테마</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <TouchableOpacity
                     style={[
@@ -396,7 +412,7 @@ const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
                     onPress={() => setTheme('light')}
                     activeOpacity={0.85}
                   >
-                    <Text style={{ color: theme === 'light' ? '#fff' : c.text, fontWeight: '700' }}>Light</Text>
+                    <Text style={{ color: theme === 'light' ? '#fff' : c.text, fontWeight: '700' }}>라이트</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
@@ -412,12 +428,12 @@ const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
                     onPress={() => setTheme('dark')}
                     activeOpacity={0.85}
                   >
-                    <Text style={{ color: theme === 'dark' ? '#fff' : c.text, fontWeight: '700' }}>Dark</Text>
+                    <Text style={{ color: theme === 'dark' ? '#fff' : c.text, fontWeight: '700' }}>다크</Text>
                   </TouchableOpacity>
                 </View>
               </View>
               <View style={[styles.navRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-                <Text style={[styles.navLink, { color: c.text }]}>Font Size</Text>
+                <Text style={[styles.navLink, { color: c.text }]}>폰트 크기</Text>
                 <View style={{ flexDirection: 'row', gap: 1, alignItems: 'center' }}>
                   <Pressable
                     style={({ pressed }) => [
@@ -459,7 +475,7 @@ const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
                 </View>
               </View>
               <View style={[styles.navRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-                <Text style={[styles.navLink, { color: c.text }]}>Motion</Text>
+                <Text style={[styles.navLink, { color: c.text }]}>애니메이션</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <TouchableOpacity
                     style={[
@@ -475,7 +491,7 @@ const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
                     onPress={() => setReduceMotion(true)}
                     activeOpacity={0.85}
                   >
-                    <Text style={{ color: reduceMotion ? '#fff' : c.text, fontWeight: '700' }}>Reduce</Text>
+                    <Text style={{ color: reduceMotion ? '#fff' : c.text, fontWeight: '700' }}>끄기</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
@@ -491,12 +507,12 @@ const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
                     onPress={() => setReduceMotion(false)}
                     activeOpacity={0.85}
                   >
-                    <Text style={{ color: !reduceMotion ? '#fff' : c.text, fontWeight: '700' }}>Default</Text>
+                    <Text style={{ color: !reduceMotion ? '#fff' : c.text, fontWeight: '700' }}>켜기</Text>
                   </TouchableOpacity>
                 </View>
               </View>
               <TouchableOpacity style={styles.navRow} onPress={handleLogout} disabled={busy}>
-                <Text style={[styles.navLink, { color: c.text }]}>Logout</Text>
+                <Text style={[styles.navLink, { color: c.text }]}>로그아웃</Text>
               </TouchableOpacity>
             </View>
           )}
