@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar'
 import { useEffect, useRef, useState } from 'react'
-import { Alert, Modal, ScrollView, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native'
+import { Alert, Modal, Pressable, ScrollView, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   createUserWithEmailAndPassword,
@@ -292,7 +292,17 @@ export default function App() {
           </View>
 
           {navOpen && (
-            <View style={[styles.navDropdown, { backgroundColor: c.card, borderColor: c.border }]}>
+            <View
+              style={[
+                styles.navDropdown,
+                {
+                  backgroundColor: theme === 'dark' ? '#1e2740' : 'rgba(255,255,255,0.96)',
+                  borderColor: theme === 'dark' ? '#394766' : '#d1d5db',
+                  left: '35%',
+                  right: '35%',
+                },
+              ]}
+            >
               {(Object.keys(tabLabel) as Array<keyof typeof tabLabel>).map((key) => (
                 <TouchableOpacity
                   key={key}
@@ -300,56 +310,161 @@ export default function App() {
                     setCurrentTab(key)
                     closePanels()
                   }}
-                  style={[styles.navRow, currentTab === key && { borderLeftWidth: 2, borderLeftColor: c.accent }]}
+                  style={[
+                    styles.navRow,
+                    currentTab === key && {
+                      backgroundColor: c.accent,
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    },
+                  ]}
                 >
-                  <Text style={[styles.navLink, { color: c.text }]}>{tabLabel[key]}</Text>
+                  <Text
+                    style={[
+                      styles.navLink,
+                      { color: currentTab === key ? '#fff' : c.text, fontWeight: '700' },
+                    ]}
+                  >
+                    {tabLabel[key]}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
           )}
 
           {settingsOpen && (
-            <View style={[styles.navDropdown, { backgroundColor: c.card, borderColor: c.border }]}>
-              <TouchableOpacity
-                style={[styles.navRow, { marginBottom: 8 }]}
-                onPress={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              >
-                <Text style={[styles.navLink, { color: c.text }]}>
-                  테마: {theme === 'dark' ? '다크' : '라이트'}
-                </Text>
-              </TouchableOpacity>
-              <View style={[styles.navRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }]}>
-                <Text style={[styles.navLink, { color: c.text }]}>글자 크기</Text>
-                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            <View
+              style={[
+                styles.navDropdown,
+                {
+                  backgroundColor: theme === 'dark' ? '#1e2740' : 'rgba(255,255,255,0.96)',
+                  borderColor: theme === 'dark' ? '#394766' : '#d1d5db',
+                  right: 16,
+                  left: undefined,
+                  width: '44%',
+                },
+              ]}
+            >
+              <View style={[styles.navRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+                <Text style={[styles.navLink, { color: c.text }]}>테마</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <TouchableOpacity
-                    style={[styles.menuButton, { paddingVertical: 6, paddingHorizontal: 10, marginLeft: 0, borderColor: c.border }]}
-                    onPress={() => setFontLevel((lvl) => Math.max(1, lvl - 1))}
-                    activeOpacity={0.8}
+                    style={[
+                      styles.menuButton,
+                      {
+                        paddingVertical: 6,
+                        paddingHorizontal: 10,
+                        marginLeft: 0,
+                        borderColor: c.border,
+                        backgroundColor: theme === 'light' ? c.accent : c.card,
+                      },
+                    ]}
+                    onPress={() => setTheme('light')}
+                    activeOpacity={0.85}
                   >
-                    <Text style={{ color: c.text, fontWeight: '700' }}>-</Text>
+                    <Text style={{ color: theme === 'light' ? '#fff' : c.text, fontWeight: '700' }}>라이트</Text>
                   </TouchableOpacity>
-                  <Text style={{ color: c.text, fontWeight: '700', minWidth: 44, textAlign: 'center' }}>
+                  <TouchableOpacity
+                    style={[
+                      styles.menuButton,
+                      {
+                        paddingVertical: 6,
+                        paddingHorizontal: 10,
+                        marginLeft: 0,
+                        borderColor: c.border,
+                        backgroundColor: theme === 'dark' ? c.accent : c.card,
+                      },
+                    ]}
+                    onPress={() => setTheme('dark')}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={{ color: theme === 'dark' ? '#fff' : c.text, fontWeight: '700' }}>다크</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={[styles.navRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+                <Text style={[styles.navLink, { color: c.text }]}>텍스트 크기</Text>
+                <View style={{ flexDirection: 'row', gap: 1, alignItems: 'center' }}>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.menuButton,
+                      {
+                        paddingVertical: 6,
+                        paddingHorizontal: 10,
+                        marginLeft: 0,
+                        borderColor: pressed ? c.accent : c.border,
+                        backgroundColor: pressed ? c.accent : c.card,
+                      },
+                    ]}
+                    onPress={() => setFontLevel((lvl) => Math.max(1, lvl - 1))}
+                  >
+                    {({ pressed }) => (
+                      <Text style={{ color: pressed ? '#fff' : c.text, fontWeight: '700' }}>-</Text>
+                    )}
+                  </Pressable>
+                  <Text style={{ color: c.text, fontWeight: '700', minWidth: 25, textAlign: 'center' }}>
                     {fontLevel}
                   </Text>
-                  <TouchableOpacity
-                    style={[styles.menuButton, { paddingVertical: 6, paddingHorizontal: 10, marginLeft: 0, borderColor: c.border }]}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.menuButton,
+                      {
+                        paddingVertical: 6,
+                        paddingHorizontal: 10,
+                        marginLeft: 0,
+                        borderColor: pressed ? c.accent : c.border,
+                        backgroundColor: pressed ? c.accent : c.card,
+                      },
+                    ]}
                     onPress={() => setFontLevel((lvl) => Math.min(7, lvl + 1))}
-                    activeOpacity={0.8}
                   >
-                    <Text style={{ color: c.text, fontWeight: '700' }}>+</Text>
+                    {({ pressed }) => (
+                      <Text style={{ color: pressed ? '#fff' : c.text, fontWeight: '700' }}>+</Text>
+                    )}
+                  </Pressable>
+                </View>
+              </View>
+              <View style={[styles.navRow, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+                <Text style={[styles.navLink, { color: c.text }]}>애니메이션</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <TouchableOpacity
+                    style={[
+                      styles.menuButton,
+                      {
+                        paddingVertical: 6,
+                        paddingHorizontal: 10,
+                        marginLeft: 0,
+                        borderColor: c.border,
+                        backgroundColor: reduceMotion ? c.accent : c.card,
+                      },
+                    ]}
+                    onPress={() => setReduceMotion(true)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={{ color: reduceMotion ? '#fff' : c.text, fontWeight: '700' }}>끄기</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.menuButton,
+                      {
+                        paddingVertical: 6,
+                        paddingHorizontal: 10,
+                        marginLeft: 0,
+                        borderColor: c.border,
+                        backgroundColor: !reduceMotion ? c.accent : c.card,
+                      },
+                    ]}
+                    onPress={() => setReduceMotion(false)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={{ color: !reduceMotion ? '#fff' : c.text, fontWeight: '700' }}>켜기</Text>
                   </TouchableOpacity>
                 </View>
               </View>
               <TouchableOpacity
-                style={[styles.navRow, { marginBottom: 8 }]}
-                onPress={() => setReduceMotion((v) => !v)}
-              >
-                <Text style={[styles.navLink, { color: c.text }]}>
-                  애니메이션 {reduceMotion ? '끄기' : '켜기'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.navRow, { marginBottom: 8 }]}
+                style={styles.navRow}
                 onPress={handleLogout}
                 disabled={busy}
               >
