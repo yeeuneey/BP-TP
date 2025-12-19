@@ -245,6 +245,53 @@ export const styles = StyleSheet.create({
     paddingVertical: 18,
     gap: 6,
   },
+  heroBanner: {
+    height: 220,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    backgroundColor: '#0b1021',
+    marginBottom: 14,
+  },
+  heroVideoWrapper: {
+    flex: 1,
+    position: 'relative',
+  },
+  heroVideo: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  heroControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 6,
+  },
+  heroControlButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroCounter: {
+    fontWeight: '700',
+  },
+  heroFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   heroEyebrow: {
     color: '#9ca3af',
     letterSpacing: 2,

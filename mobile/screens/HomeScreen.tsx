@@ -1,5 +1,6 @@
 import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native'
 
+import { HeroTrailerCarousel } from '../components/HeroTrailerCarousel'
 import { MovieSection } from '../components/MovieSection'
 import type { ThemeColors } from '../theme'
 import { styles } from '../styles'
@@ -38,6 +39,7 @@ export function HomeScreen({
 
   return (
     <>
+      <HeroTrailerCarousel colors={colors} fontScale={fontScale} />
       <View style={styles.hero}>
         <Text style={[styles.heroEyebrow, { color: colors.muted }]}>FOR YOU</Text>
         <Text style={[styles.heroTitle, { color: colors.text }]}>TMDB API로 랜덤 추천</Text>
