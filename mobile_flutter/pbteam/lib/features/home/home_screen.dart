@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../movies/providers/now_playing_provider.dart';
 import '../movies/providers/top_rated_provider.dart';
 import '../movies/widgets/movie_list.dart';
+import '../wishlist/widgets/wishlist_add_button.dart';
+import 'package:go_router/go_router.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -24,7 +26,11 @@ class HomeScreen extends ConsumerWidget {
           SizedBox(
             height: 320,
             child: nowPlaying.when(
-              data: (movies) => MovieList(movies: movies),
+              data: (movies) => MovieList(
+                movies: movies,
+                onTap: (m) => context.go('/movie/${m.id}'),
+                trailingBuilder: (m) => WishlistAddButton(movie: m),
+              ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
             ),
@@ -36,7 +42,11 @@ class HomeScreen extends ConsumerWidget {
           SizedBox(
             height: 320,
             child: topRated.when(
-              data: (movies) => MovieList(movies: movies),
+              data: (movies) => MovieList(
+                movies: movies,
+                onTap: (m) => context.go('/movie/${m.id}'),
+                trailingBuilder: (m) => WishlistAddButton(movie: m),
+              ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
             ),

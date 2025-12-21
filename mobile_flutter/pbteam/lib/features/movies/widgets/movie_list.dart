@@ -3,9 +3,16 @@ import 'package:flutter/material.dart';
 import '../models/tmdb_movie.dart';
 
 class MovieList extends StatelessWidget {
-  const MovieList({super.key, required this.movies});
+  const MovieList({
+    super.key,
+    required this.movies,
+    this.trailingBuilder,
+    this.onTap,
+  });
 
   final List<TmdbMovie> movies;
+  final Widget Function(TmdbMovie movie)? trailingBuilder;
+  final void Function(TmdbMovie movie)? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +27,8 @@ class MovieList extends StatelessWidget {
               : const SizedBox(width: 50),
           title: Text(m.title),
           subtitle: Text(m.overview, maxLines: 2, overflow: TextOverflow.ellipsis),
+          onTap: onTap != null ? () => onTap!(m) : null,
+          trailing: trailingBuilder != null ? trailingBuilder!(m) : null,
         );
       },
     );

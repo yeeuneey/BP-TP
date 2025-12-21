@@ -10,6 +10,7 @@ import '../features/root/tab_shell.dart';
 import '../features/search/search_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/wishlist/wishlist_screen.dart';
+import '../features/movies/views/movie_detail_screen.dart';
 
 /// Router provider to react to auth state changes.
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -27,6 +28,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/auth',
         name: 'auth',
         builder: (context, state) => const AuthScreen(),
+      ),
+      GoRoute(
+        path: '/movie/:id',
+        name: 'movie',
+        builder: (context, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '');
+          if (id == null) {
+            return const Scaffold(body: Center(child: Text('Invalid movie id')));
+          }
+          return MovieDetailScreen(id: id);
+        },
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
