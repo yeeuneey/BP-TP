@@ -643,7 +643,7 @@ const c: ThemeColors = theme === 'dark' ? palette.dark : palette.light
               }}
               activeOpacity={0.85}
             >
-              <Text style={[styles.logo, { color: c.accent }]}>BPTP</Text>
+              <Text style={[styles.logo, { color: c.accent }]}>YEEMIN</Text>
             </TouchableOpacity>
             <View style={[styles.navActions, { gap: 10, position: 'absolute', right: 20 }]}>
               <TouchableOpacity

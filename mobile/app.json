@@ -1,11 +1,13 @@
 {
   "expo": {
+    "owner": "yeeuneey",
     "name": "mobile",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "pbteam",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -40,7 +42,10 @@
       "tmdbApiKey": "4949db1ffed8869c4dcc9946f367c2c8",
       "youtubeApiKey": "",
       "githubClientId": "Ov23liywZGAnwIITN0wp",
-      "githubClientSecret": "754dc77e5e0e2e8775818b043052cd6a95337ea8"
-    }
+      "githubTokenEndpoint": "http://localhost:3001/auth/github/token"
+    },
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }
