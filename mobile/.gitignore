@@ -26,3 +26,10 @@ Thumbs.db
 # Env
 .env
 .env.local
+android/app/google-services.json
+
+# Legacy Expo/JS artifacts
+.expo/
+node_modules/
+components/
+screens/

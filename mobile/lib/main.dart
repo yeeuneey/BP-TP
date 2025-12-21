@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -98,9 +98,12 @@ class _AppRootState extends State<AppRoot> {
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
+        scaffoldBackgroundColor: Colors.black,
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFE50914),
           brightness: Brightness.dark,
+          background: Colors.black,
+          surface: Colors.black,
         ),
         pageTransitionsTheme: pageTransitions,
         useMaterial3: true,
@@ -411,6 +414,7 @@ class _MainScreenState extends State<MainScreen> {
   bool _heroLoading = false;
   String? _heroError;
   Timer? _suggestionDebounce;
+  Timer? _heroAutoTimer;
 
   // Fallback trailers known to allow embedding (demo-safe).
   static final List<TrailerInfo> _fallbackTrailers = [
@@ -450,6 +454,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void dispose() {
     _suggestionDebounce?.cancel();
+    _heroAutoTimer?.cancel();
     super.dispose();
   }
 
@@ -459,6 +464,7 @@ class _MainScreenState extends State<MainScreen> {
       _loadWishlist(),
       _loadGenres(),
     ]);
+    _startHeroAutoAdvance();
   }
 
   Future<void> _loadMovies() async {
@@ -476,6 +482,11 @@ class _MainScreenState extends State<MainScreen> {
         _popular = popular;
         _popularPage = 1;
         _hasMorePopular = popular.isNotEmpty;
+        if (_searchQuery.isEmpty) {
+          final base = _collectBaseMovies();
+          _searchResultsRaw = base;
+          _searchResults = _applySearchFilters(base);
+        }
       });
       await _loadHeroPlaylist();
     } catch (e) {
@@ -560,6 +571,7 @@ class _MainScreenState extends State<MainScreen> {
       _heroError = playlist.isEmpty ? '예고편을 찾을 수 없어요.' : null;
       _heroIndex = 0;
     });
+    _startHeroAutoAdvance();
     if (mounted) setState(() => _heroLoading = false);
   }
 
@@ -568,6 +580,7 @@ class _MainScreenState extends State<MainScreen> {
     setState(() {
       _heroIndex = (_heroIndex + 1) % _heroPlaylist.length;
     });
+    _startHeroAutoAdvance();
   }
 
   void _setHeroIndex(int index) {
@@ -575,6 +588,13 @@ class _MainScreenState extends State<MainScreen> {
     setState(() {
       _heroIndex = index;
     });
+    _startHeroAutoAdvance();
+  }
+
+  void _startHeroAutoAdvance() {
+    _heroAutoTimer?.cancel();
+    if (_heroPlaylist.length <= 1) return;
+    _heroAutoTimer = Timer(const Duration(seconds: 10), _nextHero);
   }
 
   Future<void> _loadWishlist() async {
@@ -693,7 +713,7 @@ class _MainScreenState extends State<MainScreen> {
                             ],
                           ),
                           Text('러닝타임: $runtimeText'),
-                          Text('개봉연도: $releaseYear'),
+                          Text('개봉년도: $releaseYear'),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -714,7 +734,9 @@ class _MainScreenState extends State<MainScreen> {
                         Text('주요 출연: ${castNames.join(', ')}', style: theme.textTheme.bodyMedium),
                       ],
                       const SizedBox(height: 16),
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           FilledButton.icon(
                             onPressed: () async {
@@ -724,7 +746,6 @@ class _MainScreenState extends State<MainScreen> {
                             icon: Icon(wishlisted ? Icons.favorite : Icons.favorite_border),
                             label: Text(wishlisted ? '위시리스트 제거' : '위시리스트 추가'),
                           ),
-                          const SizedBox(width: 8),
                           OutlinedButton.icon(
                             onPressed: () {
                               final url = Uri.parse('https://www.themoviedb.org/movie/${detail.id}');
@@ -733,7 +754,6 @@ class _MainScreenState extends State<MainScreen> {
                             icon: const Icon(Icons.open_in_new),
                             label: const Text('TMDB에서 보기'),
                           ),
-                          const SizedBox(width: 8),
                           OutlinedButton.icon(
                             onPressed: Navigator.of(context).maybePop,
                             icon: const Icon(Icons.close),
@@ -802,10 +822,14 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _handleSearch() async {
-    if (_searchQuery.trim().isEmpty) {
+    final query = _searchQuery.trim();
+    if (query.isEmpty) {
+      final base = _collectBaseMovies();
       setState(() {
-        _searchResults = [];
+        _searchResultsRaw = base;
+        _searchResults = _applySearchFilters(base);
         _searchSuggestions = [];
+        _tabIndex = 2;
       });
       return;
     }
@@ -815,7 +839,6 @@ class _MainScreenState extends State<MainScreen> {
       return;
     }
 
-    final query = _searchQuery.trim();
     setState(() => _loadingSearch = true);
     try {
       final results = await _tmdb.search(query);
@@ -911,32 +934,51 @@ class _MainScreenState extends State<MainScreen> {
     return filtered;
   }
 
+  List<Movie> _collectBaseMovies() {
+    final merged = {
+      for (final m in [..._popular, ..._nowPlaying]) m.id: m,
+    };
+    return merged.values.toList();
+  }
+
+  void _applyFiltersFromBase() {
+    final hasQuery = _searchQuery.trim().isNotEmpty;
+    final List<Movie> base = hasQuery
+        ? _searchResultsRaw
+        : _collectBaseMovies();
+    setState(() {
+      _searchResultsRaw = base;
+      _searchResults = _applySearchFilters(base);
+      _tabIndex = 2;
+    });
+  }
+
   void _setGenre(int? genreId) {
     setState(() {
       _selectedGenreId = genreId;
-      _searchResults = _applySearchFilters(_searchResultsRaw);
     });
+    _applyFiltersFromBase();
   }
 
   void _setYear(String? year) {
     setState(() {
       _selectedYear = year;
-      _searchResults = _applySearchFilters(_searchResultsRaw);
     });
+    _applyFiltersFromBase();
   }
 
   void _setMinRating(double rating) {
     setState(() {
       _minRating = rating;
-      _searchResults = _applySearchFilters(_searchResultsRaw);
     });
+    _applyFiltersFromBase();
   }
 
   void _setSortOption(String option) {
     setState(() {
       _sortOption = option;
-      _searchResults = _applySearchFilters(_searchResultsRaw);
     });
+    _applyFiltersFromBase();
   }
 
   Future<void> _handleLogout() async {
@@ -1081,6 +1123,7 @@ class _MainScreenState extends State<MainScreen> {
       ),
       body: tabs[_tabIndex],
       bottomNavigationBar: NavigationBar(
+        backgroundColor: Colors.black,
         selectedIndex: _tabIndex,
         onDestinationSelected: (index) => setState(() => _tabIndex = index),
         destinations: const [
@@ -1230,84 +1273,95 @@ class _TrailerBanner extends StatelessWidget {
     final trailer = playlist[currentIndex];
 
     final imageUrl = trailer.backdropUrl ?? trailer.movie.posterUrl;
-    return _BannerShell(
-      imageUrl: imageUrl,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Exclusive Trailer',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Colors.white70,
-                  letterSpacing: 0.5,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            trailer.movie.title,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            trailer.movie.overview.isNotEmpty
-                ? trailer.movie.overview
-                : 'No overview available.',
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              OutlinedButton.icon(
-                onPressed: onNext,
-                icon: const Icon(Icons.skip_next),
-                label: const Text('Next trailer'),
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => _openInYoutube(context, trailer.videoKey),
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('Watch on YouTube'),
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
-              ),
-            ],
-          ),
-          if (playlist.length > 1) ...[
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 400),
+      transitionBuilder: (child, animation) {
+        final slide = Tween<Offset>(begin: const Offset(0.1, 0), end: Offset.zero).animate(animation);
+        return SlideTransition(
+          position: slide,
+          child: FadeTransition(opacity: animation, child: child),
+        );
+      },
+      child: _BannerShell(
+        key: ValueKey(trailer.videoKey),
+        imageUrl: imageUrl,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Exclusive Trailer',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Colors.white70,
+                    letterSpacing: 0.5,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              trailer.movie.title,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              trailer.movie.overview.isNotEmpty
+                  ? trailer.movie.overview
+                  : 'No overview available.',
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+            ),
             const SizedBox(height: 12),
-            Row(
-              children: List.generate(
-                playlist.length,
-                (idx) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () => onSetIndex(idx),
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: idx == currentIndex ? Colors.white : Colors.white38,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: onNext,
+                  icon: const Icon(Icons.skip_next),
+                  label: const Text('Next trailer'),
+                  style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _openInYoutube(context, trailer.videoKey),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Watch on YouTube'),
+                  style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
+                ),
+              ],
+            ),
+            if (playlist.length > 1) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: List.generate(
+                  playlist.length,
+                  (idx) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: GestureDetector(
+                      onTap: () => onSetIndex(idx),
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: idx == currentIndex ? Colors.white : Colors.white38,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
 }
 
 class _BannerShell extends StatelessWidget {
-  const _BannerShell({this.imageUrl, required this.child});
+  const _BannerShell({Key? key, this.imageUrl, required this.child}) : super(key: key);
 
   final String? imageUrl;
   final Widget child;
@@ -2167,3 +2221,4 @@ class WishlistItem {
     );
   }
 }
+

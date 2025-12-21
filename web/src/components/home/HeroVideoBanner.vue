@@ -10,9 +10,9 @@
         class="hero-banner__player"
       ></div>
       <div v-else class="hero-banner__fallback-media">
-        <p class="hero-banner__fallback-eyebrow">PB neteflix originals</p>
-        <h2>최신 인기 예고편을 곧 만날 수 있어요</h2>
-        <p>조금만 기다리면 홈 배너에서 새 트레일러가 자동으로 재생됩니다.</p>
+        <p class="hero-banner__fallback-eyebrow">YEEMIN originals</p>
+        <h2>최신 인기 예고편을 한눈에</h2>
+        <p>로그인만 하면 YEEMIN 배너에서 분위기 충만한 트레일러를 바로 재생할 수 있어요.</p>
       </div>
     </div>
 
@@ -31,7 +31,7 @@
             상세 보기
           </RouterLink>
           <button type="button" class="hero-btn" @click="$emit('toggle-mute')">
-            {{ muted ? '사운드 켜기' : '음소거' }}
+            {{ muted ? '음소거 해제' : '음소거' }}
           </button>
           <button
             type="button"
