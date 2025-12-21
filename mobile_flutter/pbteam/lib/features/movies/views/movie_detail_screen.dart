@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher_string.dart';
-
 import '../providers/movie_detail_provider.dart';
 import '../widgets/movie_meta.dart';
 
@@ -15,7 +13,7 @@ class MovieDetailScreen extends ConsumerWidget {
     final detail = ref.watch(movieDetailProvider(id));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Movie Details')),
+      appBar: AppBar(title: const Text('영화 상세 정보')),
       body: detail.when(
         data: (movie) => SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -39,15 +37,6 @@ class MovieDetailScreen extends ConsumerWidget {
               MovieMeta(movie: movie),
               const SizedBox(height: 12),
               Text(movie.overview),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  final q = Uri.encodeComponent('${movie.title} official trailer');
-                  launchUrlString('https://www.youtube.com/results?search_query=$q');
-                },
-                icon: const Icon(Icons.ondemand_video),
-                label: const Text('Search trailer on YouTube'),
-              ),
             ],
           ),
         ),

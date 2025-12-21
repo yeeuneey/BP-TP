@@ -16,8 +16,10 @@ class MovieMeta extends StatelessWidget {
         if (movie.releaseDate != null)
           _chip(Icons.calendar_today, movie.releaseDate!),
         _chip(Icons.star, movie.voteAverage.toStringAsFixed(1)),
-        if (movie.genreIds.isNotEmpty)
-          _chip(Icons.category, '${movie.genreIds.length} genres'),
+        if (movie.genres.isNotEmpty)
+          _chip(Icons.category, movie.genres.join(', ')),
+        if (movie.language != null)
+          _chip(Icons.language, movie.language!),
       ],
     );
   }

@@ -8,6 +8,8 @@ class TmdbMovie {
   final double voteAverage;
   final int voteCount;
   final List<int> genreIds;
+  final List<String> genres;
+  final String? language;
 
   const TmdbMovie({
     required this.id,
@@ -19,9 +21,18 @@ class TmdbMovie {
     required this.voteAverage,
     required this.voteCount,
     required this.genreIds,
+    required this.genres,
+    required this.language,
   });
 
   factory TmdbMovie.fromJson(Map<String, dynamic> json) {
+    final rawGenres = json['genres'] as List<dynamic>?;
+    final genreNames = rawGenres == null
+        ? const <String>[]
+        : rawGenres
+            .map((e) => (e as Map<String, dynamic>?)?['name'] as String? ?? '')
+            .where((e) => e.isNotEmpty)
+            .toList();
     return TmdbMovie(
       id: json['id'] as int,
       title: (json['title'] ?? json['name'] ?? '') as String,
@@ -32,6 +43,8 @@ class TmdbMovie {
       voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0,
       voteCount: json['vote_count'] as int? ?? 0,
       genreIds: (json['genre_ids'] as List<dynamic>? ?? []).map((e) => e as int).toList(),
+      genres: genreNames,
+      language: (json['original_language'] as String?)?.toUpperCase(),
     );
   }
 
