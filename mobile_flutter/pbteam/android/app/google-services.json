@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "309869010872",
+    "project_id": "pb-team",
+    "storage_bucket": "pb-team.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:309869010872:android:d36d817eb1e31dca46f94d",
+        "android_client_info": {
+          "package_name": "com.pbteam.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "309869010872-di41gfk86ko8h76b6s3qusqsf44j31po.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pbteam.app",
+            "certificate_hash": "8a997891aba33c34b914fb5fc21d8f4d4a028e68"
+          }
+        },
+        {
+          "client_id": "309869010872-mngfli8na798j5e7hgnu7qp4sn928fq1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgAsTi5gpu1bFpXGi1TVQ2cWq2mSMS0rw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "309869010872-mngfli8na798j5e7hgnu7qp4sn928fq1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "309869010872-bhnn27ea4coh4t56q1df737i6amds9bl.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pbteam.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
