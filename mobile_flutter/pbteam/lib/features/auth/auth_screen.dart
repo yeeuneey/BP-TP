@@ -140,7 +140,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'PB TEAM',
+                'YEEMIN',
                 style: const TextStyle(
                   color: _accent,
                   fontWeight: FontWeight.w800,

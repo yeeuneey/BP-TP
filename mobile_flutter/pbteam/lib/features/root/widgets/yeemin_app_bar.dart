@@ -76,94 +76,88 @@ class _SettingsMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<_SettingsAction>(
-      tooltip: 'Settings',
-      position: PopupMenuPosition.under,
-      onSelected: (action) async {
-        switch (action) {
-          case _SettingsAction.themeLight:
-            onThemeChange(ThemeMode.light);
-            break;
-          case _SettingsAction.themeDark:
-            onThemeChange(ThemeMode.dark);
-            break;
-          case _SettingsAction.fontDown:
-            onFontDown();
-            break;
-          case _SettingsAction.fontUp:
-            onFontUp();
-            break;
-          case _SettingsAction.toggleMotion:
-            onToggleMotion();
-            break;
-          case _SettingsAction.logout:
-            await onLogout();
-            break;
-        }
-      },
-      itemBuilder: (context) => [
-        const PopupMenuItem(
+    return _SettingsButton(
+      colors: colors,
+      ui: ui,
+      onThemeChange: onThemeChange,
+      onFontDown: onFontDown,
+      onFontUp: onFontUp,
+      onToggleMotion: onToggleMotion,
+      onLogout: onLogout,
+    );
+  }
+}
+
+class _SettingsButton extends StatefulWidget {
+  const _SettingsButton({
+    required this.colors,
+    required this.ui,
+    required this.onThemeChange,
+    required this.onFontDown,
+    required this.onFontUp,
+    required this.onToggleMotion,
+    required this.onLogout,
+  });
+
+  final ColorScheme colors;
+  final UiSettings ui;
+  final ValueChanged<ThemeMode> onThemeChange;
+  final VoidCallback onFontDown;
+  final VoidCallback onFontUp;
+  final VoidCallback onToggleMotion;
+  final Future<void> Function() onLogout;
+
+  @override
+  State<_SettingsButton> createState() => _SettingsButtonState();
+}
+
+class _SettingsButtonState extends State<_SettingsButton> {
+  final _anchorKey = GlobalKey();
+
+  Future<void> _openMenu() async {
+    final renderBox = _anchorKey.currentContext?.findRenderObject() as RenderBox?;
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    if (renderBox == null) return;
+
+    final button = renderBox.localToGlobal(Offset.zero, ancestor: overlay);
+    final size = renderBox.size;
+    final rect = Rect.fromLTWH(button.dx, button.dy, size.width, size.height);
+
+    await showMenu(
+      context: context,
+      color: Colors.transparent,
+      elevation: 0,
+      position: RelativeRect.fromRect(rect, Offset.zero & overlay.size),
+      items: [
+        PopupMenuItem<int>(
+          padding: EdgeInsets.zero,
           enabled: false,
-          child: Text(
-            'Settings',
-            style: TextStyle(fontWeight: FontWeight.w800),
+          child: _SettingsPanel(
+            ui: widget.ui,
+            onThemeChange: widget.onThemeChange,
+            onFontDown: widget.onFontDown,
+            onFontUp: widget.onFontUp,
+            onToggleMotion: widget.onToggleMotion,
+            onLogout: widget.onLogout,
           ),
-        ),
-        CheckedPopupMenuItem(
-          value: _SettingsAction.themeLight,
-          checked: ui.themeMode == ThemeMode.light,
-          child: const _MenuRow(
-            icon: Icons.light_mode_outlined,
-            label: '라이트 테마',
-          ),
-        ),
-        CheckedPopupMenuItem(
-          value: _SettingsAction.themeDark,
-          checked: ui.themeMode == ThemeMode.dark,
-          child: const _MenuRow(
-            icon: Icons.dark_mode_outlined,
-            label: '다크 테마',
-          ),
-        ),
-        PopupMenuItem(
-          enabled: false,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.text_fields, size: 18),
-              const SizedBox(width: 10),
-              Text('폰트 ${ui.fontLevel}/7'),
-            ],
-          ),
-        ),
-        const PopupMenuItem(
-          value: _SettingsAction.fontDown,
-          child: _MenuRow(icon: Icons.remove, label: '폰트 작게'),
-        ),
-        const PopupMenuItem(
-          value: _SettingsAction.fontUp,
-          child: _MenuRow(icon: Icons.add, label: '폰트 크게'),
-        ),
-        CheckedPopupMenuItem(
-          value: _SettingsAction.toggleMotion,
-          checked: ui.reduceMotion,
-          child: const _MenuRow(
-            icon: Icons.motion_photos_off,
-            label: '모션 줄이기',
-          ),
-        ),
-        const PopupMenuDivider(),
-        const PopupMenuItem(
-          value: _SettingsAction.logout,
-          child: _MenuRow(icon: Icons.logout, label: 'Log out'),
         ),
       ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = widget.colors;
+    return GestureDetector(
+      key: _anchorKey,
+      onTap: _openMenu,
       child: Container(
         margin: const EdgeInsets.only(right: 12),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           border: Border.all(color: colors.outlineVariant),
           borderRadius: BorderRadius.circular(10),
+          color: colors.surfaceVariant.withOpacity(0.1),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -171,7 +165,7 @@ class _SettingsMenu extends StatelessWidget {
             Icon(Icons.settings_outlined, color: colors.onSurface, size: 18),
             const SizedBox(width: 6),
             Text(
-              'Settings',
+              '설정',
               style: TextStyle(
                 color: colors.onSurface,
                 fontWeight: FontWeight.w700,
@@ -184,33 +178,231 @@ class _SettingsMenu extends StatelessWidget {
   }
 }
 
-class _MenuRow extends StatelessWidget {
-  const _MenuRow({required this.icon, required this.label});
+class _SettingsPanel extends StatelessWidget {
+  const _SettingsPanel({
+    required this.ui,
+    required this.onThemeChange,
+    required this.onFontDown,
+    required this.onFontUp,
+    required this.onToggleMotion,
+    required this.onLogout,
+  });
 
-  final IconData icon;
-  final String label;
+  final UiSettings ui;
+  final ValueChanged<ThemeMode> onThemeChange;
+  final VoidCallback onFontDown;
+  final VoidCallback onFontUp;
+  final VoidCallback onToggleMotion;
+  final Future<void> Function() onLogout;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 18),
-        const SizedBox(width: 10),
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ],
+    const panelBg = Color(0xFF1F2845);
+    const panelBorder = Color(0xFF2B3455);
+    const muted = Color(0xFFA6B0CB);
+
+    void close() => Navigator.of(context).pop();
+
+    return Container(
+      margin: const EdgeInsets.only(right: 8, top: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: panelBg,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: panelBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black45,
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      width: 240,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Label(text: '테마', color: muted),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _PillButton(
+                label: '라이트',
+                active: ui.themeMode == ThemeMode.light,
+                onTap: () {
+                  onThemeChange(ThemeMode.light);
+                  close();
+                },
+              ),
+              const SizedBox(width: 10),
+              _PillButton(
+                label: '다크',
+                active: ui.themeMode == ThemeMode.dark,
+                onTap: () {
+                  onThemeChange(ThemeMode.dark);
+                  close();
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _Label(text: '폰트 크기', color: muted),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _SquareButton(
+                icon: Icons.remove,
+                onTap: () {
+                  onFontDown();
+                  close();
+                },
+              ),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    ui.fontLevel.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+              _SquareButton(
+                icon: Icons.add,
+                onTap: () {
+                  onFontUp();
+                  close();
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _Label(text: '애니메이션', color: muted),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _PillButton(
+                label: '끄기',
+                active: ui.reduceMotion,
+                onTap: () {
+                  if (!ui.reduceMotion) {
+                    onToggleMotion();
+                  }
+                  close();
+                },
+              ),
+              const SizedBox(width: 10),
+              _PillButton(
+                label: '켜기',
+                active: !ui.reduceMotion,
+                onTap: () {
+                  if (ui.reduceMotion) {
+                    onToggleMotion();
+                  }
+                  close();
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          TextButton(
+            onPressed: () {
+              close();
+              onLogout();
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.zero,
+            ),
+            child: const Text(
+              '로그아웃',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-enum _SettingsAction {
-  themeLight,
-  themeDark,
-  fontDown,
-  fontUp,
-  toggleMotion,
-  logout,
+class _Label extends StatelessWidget {
+  const _Label({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: color,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+}
+
+class _PillButton extends StatelessWidget {
+  const _PillButton({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: active ? _accent : const Color(0xFF12182D),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF2B3455)),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SquareButton extends StatelessWidget {
+  const _SquareButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: const Color(0xFF12182D),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF2B3455)),
+        ),
+        child: Icon(icon, color: Colors.white),
+      ),
+    );
+  }
 }
